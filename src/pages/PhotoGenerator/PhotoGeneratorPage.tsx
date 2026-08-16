@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ErrorBanner } from '../../components/UI/ErrorBanner';
 import { PhotoUploader } from '../../components/Uploader/PhotoUploader';
 import { CanvasPreview } from '../../components/Editor/CanvasPreview';
@@ -8,7 +8,11 @@ import { SupportersCounter } from '../../components/Counter/SupportersCounter';
 import { PreviewExample } from '../../components/PreviewExample/PreviewExample';
 import { usePhotoEditor } from '../../hooks/usePhotoEditor';
 import { exportCompositeImage } from '../../services/imageExporter';
-import { getStoredSupportersCount, incrementLocalSupportersCount } from '../../services/counterService';
+import {
+  getStoredSupportersCount,
+  fetchLiveSupportersCount,
+  incrementLiveSupportersCount,
+} from '../../services/counterService';
 import { CAMPAIGN_CONFIG } from '../../config/campaign';
 
 export const PhotoGeneratorPage: React.FC = () => {
@@ -29,13 +33,18 @@ export const PhotoGeneratorPage: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [supportersCount, setSupportersCount] = useState<number>(getStoredSupportersCount);
 
+  useEffect(() => {
+    fetchLiveSupportersCount().then(setSupportersCount);
+  }, []);
+
   const handleDownload = async () => {
     if (!userImage || isExporting) return;
     setIsExporting(true);
     try {
       const fileName = `perfil-${CAMPAIGN_CONFIG.candidateName.toLowerCase().replace(/\s+/g, '-')}.png`;
       await exportCompositeImage(userImage, frameImage, transform, fileName);
-      setSupportersCount(incrementLocalSupportersCount());
+      const updatedCount = await incrementLiveSupportersCount();
+      setSupportersCount(updatedCount);
     } finally {
       setIsExporting(false);
     }
