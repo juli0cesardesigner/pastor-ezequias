@@ -1,12 +1,15 @@
 import { sql } from '../config/database';
 
 const STORAGE_KEY = 'ezequias_profile_supporters_count';
-const SESSION_VISIT_KEY = 'ezequias_session_visited_counted';
+const LAST_VISIT_TIMESTAMP_KEY = 'ezequias_last_counted_visit_time';
 export const CAMPAIGN_COUNTER_ID = 'pastor_ezequias_supporters';
 export const BASE_SUPPORTERS_COUNT = 1;
 
+// Intervalo mínimo de 1 hora (em milissegundos) para computar novo acesso do mesmo usuário
+const VISIT_COOLDOWN_MS = 60 * 60 * 1000;
+
 /**
- * Leitura síncrona do cache local para evitar flicker de carregamento na tela
+ * Leitura síncrona do cache local para renderização instantânea
  */
 export function getStoredSupportersCount(): number {
   try {
@@ -24,20 +27,28 @@ export function getStoredSupportersCount(): number {
 }
 
 /**
- * Registra o acesso/visita à página no Neon DB e retorna a contagem atualizada
+ * Registra o acesso com trava de tempo (cooldown de 1 hora por dispositivo/navegador)
+ * Evita contagens desenfreadas por F5/atualizações contínuas da página.
  */
 export async function registerVisitAndGetCount(): Promise<number> {
   const currentLocal = getStoredSupportersCount();
+  const now = Date.now();
 
-  // Verifica se este usuário já foi contabilizado nesta sessão
-  let alreadyCountedInSession = false;
+  // Verifica se o dispositivo já foi computado na última 1 hora
+  let isWithinCooldown = false;
   try {
-    alreadyCountedInSession = sessionStorage.getItem(SESSION_VISIT_KEY) === '1';
+    const lastVisitStr = localStorage.getItem(LAST_VISIT_TIMESTAMP_KEY);
+    if (lastVisitStr) {
+      const lastVisitTime = parseInt(lastVisitStr, 10);
+      if (!isNaN(lastVisitTime) && now - lastVisitTime < VISIT_COOLDOWN_MS) {
+        isWithinCooldown = true;
+      }
+    }
   } catch {}
 
   try {
-    if (!alreadyCountedInSession) {
-      // 1. Nova visita: incrementa atomicamente no Neon DB
+    if (!isWithinCooldown) {
+      // 1. Novo acesso válido (mais de 1h desde a última contagem ou primeira visita):
       const rows = await sql`
         UPDATE campaign_counters
         SET count = count + 1,
@@ -46,12 +57,12 @@ export async function registerVisitAndGetCount(): Promise<number> {
         RETURNING count;
       `;
 
-      // Marca que a sessão já foi computada
+      // Registra o timestamp atual no dispositivo para bloquear próximas atualizações por 1h
       try {
-        sessionStorage.setItem(SESSION_VISIT_KEY, '1');
+        localStorage.setItem(LAST_VISIT_TIMESTAMP_KEY, now.toString());
       } catch {}
 
-      // Registra log assíncrono de acesso
+      // Registra log assíncrono
       sql`
         INSERT INTO supporters_log (campaign_id)
         VALUES ('pastor_ezequias');
@@ -68,7 +79,7 @@ export async function registerVisitAndGetCount(): Promise<number> {
       }
       return currentLocal + 1;
     } else {
-      // 2. Visita já computada na sessão: apenas busca a contagem mais recente
+      // 2. Atualização de página/recarregamento dentro de 1h: Apenas consulta o total atual
       const rows = await sql`
         SELECT count 
         FROM campaign_counters 
