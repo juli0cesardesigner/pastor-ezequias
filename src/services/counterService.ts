@@ -1,18 +1,19 @@
 import { sql } from '../config/database';
 
 const STORAGE_KEY = 'ezequias_profile_supporters_count';
+const SESSION_VISIT_KEY = 'ezequias_session_visited_counted';
 export const CAMPAIGN_COUNTER_ID = 'pastor_ezequias_supporters';
-export const BASE_SUPPORTERS_COUNT = 0;
+export const BASE_SUPPORTERS_COUNT = 1;
 
 /**
- * Leitura síncrona do cache local para renderização instantânea
+ * Leitura síncrona do cache local para evitar flicker de carregamento na tela
  */
 export function getStoredSupportersCount(): number {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved !== null) {
       const parsed = parseInt(saved, 10);
-      if (!isNaN(parsed) && parsed >= 0) {
+      if (!isNaN(parsed) && parsed >= 1) {
         return parsed;
       }
     }
@@ -23,72 +24,71 @@ export function getStoredSupportersCount(): number {
 }
 
 /**
- * Busca a contagem real atualizada no Neon DB
+ * Registra o acesso/visita à página no Neon DB e retorna a contagem atualizada
  */
-export async function fetchLiveSupportersCount(): Promise<number> {
-  try {
-    const rows = await sql`
-      SELECT count 
-      FROM campaign_counters 
-      WHERE id = ${CAMPAIGN_COUNTER_ID}
-      LIMIT 1;
-    `;
+export async function registerVisitAndGetCount(): Promise<number> {
+  const currentLocal = getStoredSupportersCount();
 
-    if (rows && rows.length > 0) {
-      const liveCount = Number(rows[0].count);
-      if (!isNaN(liveCount) && liveCount >= 0) {
-        try {
-          localStorage.setItem(STORAGE_KEY, liveCount.toString());
-        } catch {
-          // Ignore storage issues
+  // Verifica se este usuário já foi contabilizado nesta sessão
+  let alreadyCountedInSession = false;
+  try {
+    alreadyCountedInSession = sessionStorage.getItem(SESSION_VISIT_KEY) === '1';
+  } catch {}
+
+  try {
+    if (!alreadyCountedInSession) {
+      // 1. Nova visita: incrementa atomicamente no Neon DB
+      const rows = await sql`
+        UPDATE campaign_counters
+        SET count = count + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${CAMPAIGN_COUNTER_ID}
+        RETURNING count;
+      `;
+
+      // Marca que a sessão já foi computada
+      try {
+        sessionStorage.setItem(SESSION_VISIT_KEY, '1');
+      } catch {}
+
+      // Registra log assíncrono de acesso
+      sql`
+        INSERT INTO supporters_log (campaign_id)
+        VALUES ('pastor_ezequias');
+      `.catch(() => {});
+
+      if (rows && rows.length > 0) {
+        const liveCount = Number(rows[0].count);
+        if (!isNaN(liveCount) && liveCount >= 1) {
+          try {
+            localStorage.setItem(STORAGE_KEY, liveCount.toString());
+          } catch {}
+          return liveCount;
         }
-        return liveCount;
+      }
+      return currentLocal + 1;
+    } else {
+      // 2. Visita já computada na sessão: apenas busca a contagem mais recente
+      const rows = await sql`
+        SELECT count 
+        FROM campaign_counters 
+        WHERE id = ${CAMPAIGN_COUNTER_ID}
+        LIMIT 1;
+      `;
+
+      if (rows && rows.length > 0) {
+        const liveCount = Number(rows[0].count);
+        if (!isNaN(liveCount) && liveCount >= 1) {
+          try {
+            localStorage.setItem(STORAGE_KEY, liveCount.toString());
+          } catch {}
+          return liveCount;
+        }
       }
     }
   } catch (err) {
-    console.warn('Aviso: Falha ao sincronizar contador com Neon DB, usando cache local.', err);
-  }
-  return getStoredSupportersCount();
-}
-
-/**
- * Incrementa o contador atômico no Neon DB e registra log
- */
-export async function incrementLiveSupportersCount(): Promise<number> {
-  const optimisticNext = getStoredSupportersCount() + 1;
-  try {
-    localStorage.setItem(STORAGE_KEY, optimisticNext.toString());
-  } catch {
-    // Ignore storage issues
+    console.warn('Aviso: Falha ao comunicar com o Neon DB, usando cache local.', err);
   }
 
-  try {
-    const rows = await sql`
-      UPDATE campaign_counters
-      SET count = count + 1,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = ${CAMPAIGN_COUNTER_ID}
-      RETURNING count;
-    `;
-
-    // Registra log assíncrono
-    sql`
-      INSERT INTO supporters_log (campaign_id)
-      VALUES ('pastor_ezequias');
-    `.catch(() => {});
-
-    if (rows && rows.length > 0) {
-      const updatedCount = Number(rows[0].count);
-      if (!isNaN(updatedCount)) {
-        try {
-          localStorage.setItem(STORAGE_KEY, updatedCount.toString());
-        } catch {}
-        return updatedCount;
-      }
-    }
-  } catch (err) {
-    console.error('Erro ao atualizar contador no Neon DB:', err);
-  }
-
-  return optimisticNext;
+  return currentLocal;
 }

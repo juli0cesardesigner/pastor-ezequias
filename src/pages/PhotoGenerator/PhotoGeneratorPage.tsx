@@ -10,8 +10,7 @@ import { usePhotoEditor } from '../../hooks/usePhotoEditor';
 import { exportCompositeImage } from '../../services/imageExporter';
 import {
   getStoredSupportersCount,
-  fetchLiveSupportersCount,
-  incrementLiveSupportersCount,
+  registerVisitAndGetCount,
 } from '../../services/counterService';
 import { CAMPAIGN_CONFIG } from '../../config/campaign';
 
@@ -34,7 +33,7 @@ export const PhotoGeneratorPage: React.FC = () => {
   const [supportersCount, setSupportersCount] = useState<number>(getStoredSupportersCount);
 
   useEffect(() => {
-    fetchLiveSupportersCount().then(setSupportersCount);
+    registerVisitAndGetCount().then(setSupportersCount);
   }, []);
 
   const handleDownload = async () => {
@@ -43,8 +42,6 @@ export const PhotoGeneratorPage: React.FC = () => {
     try {
       const fileName = `perfil-${CAMPAIGN_CONFIG.candidateName.toLowerCase().replace(/\s+/g, '-')}.png`;
       await exportCompositeImage(userImage, frameImage, transform, fileName);
-      const updatedCount = await incrementLiveSupportersCount();
-      setSupportersCount(updatedCount);
     } finally {
       setIsExporting(false);
     }
