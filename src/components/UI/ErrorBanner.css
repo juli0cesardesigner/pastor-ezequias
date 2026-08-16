@@ -1,0 +1,35 @@
+.error-banner {
+  width: 100%;
+  max-width: 440px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.error-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-banner-close-btn {
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 4px;
+  transition: opacity var(--transition-fast);
+}
+
+.error-banner-close-btn:hover {
+  opacity: 0.8;
+}

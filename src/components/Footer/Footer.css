@@ -1,0 +1,14 @@
+.app-footer {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  border-top: 1px solid var(--border-subtle);
+  background: rgba(10, 15, 29, 0.6);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.app-footer p {
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.4;
+}

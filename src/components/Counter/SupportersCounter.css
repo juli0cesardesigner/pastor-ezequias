@@ -1,0 +1,39 @@
+.supporters-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.45rem 1.15rem;
+  border-radius: var(--radius-full);
+  background: rgba(18, 26, 46, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  margin: 1.25rem auto 0;
+  transition: var(--transition-fast);
+  user-select: none;
+}
+
+.supporters-badge-pill:hover {
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(26, 38, 68, 0.95);
+  transform: translateY(-1px);
+}
+
+.supporters-icon {
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.supporters-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+}
+
+.supporters-text strong {
+  font-weight: 800;
+  color: #ffffff;
+}

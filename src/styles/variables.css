@@ -1,0 +1,47 @@
+:root {
+  /* Brand Color Tokens */
+  --color-primary: #154bb2;
+  --color-primary-hover: #1e40af;
+  --color-primary-glow: rgba(21, 75, 178, 0.35);
+  
+  --color-gold: #f59e0b;
+  --color-gold-light: #fde047;
+  --color-gold-glow: rgba(245, 158, 11, 0.4);
+
+  --color-emerald: #10b981;
+  --color-emerald-dark: #047857;
+
+  /* Backgrounds & Neutrals */
+  --bg-main: #0a0f1d;
+  --bg-card: rgba(18, 26, 46, 0.85);
+  --bg-card-hover: rgba(26, 38, 68, 0.95);
+  --bg-canvas: #0f172a;
+
+  /* Border & Accents */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-active: rgba(245, 158, 11, 0.6);
+  --border-highlight: rgba(255, 255, 255, 0.16);
+
+  /* Typography */
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-gold: #fde047;
+
+  /* Elevation / Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
+  --shadow-gold: 0 8px 25px rgba(245, 158, 11, 0.25);
+  --shadow-primary: 0 8px 25px rgba(21, 75, 178, 0.35);
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}

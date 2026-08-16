@@ -1,0 +1,33 @@
+.preview-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  width: 100%;
+}
+
+.canvas-container {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(245, 158, 11, 0.35);
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  background: var(--bg-canvas);
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.canvas-container:active {
+  cursor: grabbing;
+}
+
+.main-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
