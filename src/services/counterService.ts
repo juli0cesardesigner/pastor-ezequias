@@ -3,6 +3,7 @@ import { sql } from '../config/database';
 const STORAGE_KEY = 'ezequias_profile_supporters_count';
 const LAST_VISIT_TIMESTAMP_KEY = 'ezequias_last_counted_visit_time';
 export const CAMPAIGN_COUNTER_ID = 'pastor_ezequias_supporters';
+export const DOWNLOADS_COUNTER_ID = 'pastor_ezequias_downloads';
 export const BASE_SUPPORTERS_COUNT = 1;
 
 // Intervalo mínimo de 1 hora (em milissegundos) para computar novo acesso do mesmo usuário
@@ -64,8 +65,8 @@ export async function registerVisitAndGetCount(): Promise<number> {
 
       // Registra log assíncrono
       sql`
-        INSERT INTO supporters_log (campaign_id)
-        VALUES ('pastor_ezequias');
+        INSERT INTO supporters_log (campaign_id, event_type)
+        VALUES ('pastor_ezequias', 'visit');
       `.catch(() => {});
 
       if (rows && rows.length > 0) {
@@ -102,4 +103,25 @@ export async function registerVisitAndGetCount(): Promise<number> {
   }
 
   return currentLocal;
+}
+
+/**
+ * Registra o download real da imagem no Neon DB
+ */
+export async function recordImageDownload(): Promise<void> {
+  try {
+    await sql`
+      UPDATE campaign_counters
+      SET count = count + 1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${DOWNLOADS_COUNTER_ID};
+    `;
+
+    sql`
+      INSERT INTO supporters_log (campaign_id, event_type)
+      VALUES ('pastor_ezequias', 'download');
+    `.catch(() => {});
+  } catch (err) {
+    console.error('Erro ao registrar download no Neon DB:', err);
+  }
 }

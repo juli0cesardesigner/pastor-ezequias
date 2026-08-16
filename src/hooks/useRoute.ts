@@ -5,6 +5,9 @@ function getRouteFromLocation(): PageRoute {
   const path = window.location.pathname.toLowerCase();
   const hash = window.location.hash.toLowerCase().replace(/^#\/?/, '');
 
+  if (path === '/admin' || path === '/admin/' || path.startsWith('/admin') || hash === 'admin') {
+    return 'admin';
+  }
   if (path === '/apoio' || path === '/apoio/' || path.startsWith('/apoio') || hash === 'apoio') {
     return 'apoio';
   }
@@ -29,7 +32,7 @@ export function useRoute() {
   }, []);
 
   const navigateTo = useCallback((route: PageRoute) => {
-    const targetPath = route === 'home' ? '/' : '/apoio';
+    const targetPath = route === 'home' ? '/' : `/${route}`;
     if (window.location.pathname !== targetPath) {
       window.history.pushState({}, '', targetPath);
     }

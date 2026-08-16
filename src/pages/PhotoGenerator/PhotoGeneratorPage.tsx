@@ -11,6 +11,7 @@ import { exportCompositeImage } from '../../services/imageExporter';
 import {
   getStoredSupportersCount,
   registerVisitAndGetCount,
+  recordImageDownload,
 } from '../../services/counterService';
 import { CAMPAIGN_CONFIG } from '../../config/campaign';
 
@@ -42,6 +43,8 @@ export const PhotoGeneratorPage: React.FC = () => {
     try {
       const fileName = `perfil-${CAMPAIGN_CONFIG.candidateName.toLowerCase().replace(/\s+/g, '-')}.png`;
       await exportCompositeImage(userImage, frameImage, transform, fileName);
+      // Registra o download real no banco de dados
+      recordImageDownload();
     } finally {
       setIsExporting(false);
     }

@@ -13,6 +13,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  flex: 1;
+}
+
+.main-content.admin-main {
+  max-width: 880px;
 }
 
 .uploader-flow-container {
