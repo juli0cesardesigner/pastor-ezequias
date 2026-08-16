@@ -17,9 +17,9 @@ CREATE TABLE IF NOT EXISTS supporters_log (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Inserir o contador inicial da campanha (caso não exista)
+-- 3. Inserir o contador inicial da campanha
 INSERT INTO campaign_counters (id, count)
-VALUES ('pastor_ezequias_supporters', 1240)
+VALUES ('pastor_ezequias_supporters', 0)
 ON CONFLICT (id) DO NOTHING;
 
 -- 4. Função Atômica para Incrementar e Registrar em uma única transação

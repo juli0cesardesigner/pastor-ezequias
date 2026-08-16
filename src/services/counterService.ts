@@ -2,7 +2,7 @@ import { sql } from '../config/database';
 
 const STORAGE_KEY = 'ezequias_profile_supporters_count';
 export const CAMPAIGN_COUNTER_ID = 'pastor_ezequias_supporters';
-export const BASE_SUPPORTERS_COUNT = 1240;
+export const BASE_SUPPORTERS_COUNT = 0;
 
 /**
  * Leitura síncrona do cache local para renderização instantânea
@@ -10,9 +10,9 @@ export const BASE_SUPPORTERS_COUNT = 1240;
 export function getStoredSupportersCount(): number {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
+    if (saved !== null) {
       const parsed = parseInt(saved, 10);
-      if (!isNaN(parsed) && parsed > 0) {
+      if (!isNaN(parsed) && parsed >= 0) {
         return parsed;
       }
     }
@@ -36,7 +36,7 @@ export async function fetchLiveSupportersCount(): Promise<number> {
 
     if (rows && rows.length > 0) {
       const liveCount = Number(rows[0].count);
-      if (!isNaN(liveCount) && liveCount > 0) {
+      if (!isNaN(liveCount) && liveCount >= 0) {
         try {
           localStorage.setItem(STORAGE_KEY, liveCount.toString());
         } catch {
