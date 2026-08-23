@@ -37,14 +37,12 @@ button {
   background: none;
 }
 
-/* Glass Card Utility */
+/* Flat Card Utility */
 .glass-card {
-  background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  box-shadow: none;
 }
 
 /* Keyframes for subtle entrance */

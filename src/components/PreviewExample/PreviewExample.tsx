@@ -4,7 +4,7 @@ import './PreviewExample.css';
 
 export const PreviewExample: React.FC = () => {
   return (
-    <section className="preview-example-card glass-card animate-fade-in">
+    <section className="preview-example-card animate-fade-in">
       <div className="example-header">
         <h3 className="example-title">
           <Wand2 size={20} className="example-title-icon" />
