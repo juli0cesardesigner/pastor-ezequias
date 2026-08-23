@@ -46,8 +46,13 @@ interface LinkItem {
   icon: React.ReactNode;
 }
 
-export const HomePage: React.FC = () => {
+interface HomePageProps {
+  onNavigate?: (route: any) => void;
+}
+
+export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
   const { navigateTo } = useRoute();
+  const navigate = onNavigate || navigateTo;
 
   const buttons: LinkItem[] = [
     {
@@ -82,7 +87,7 @@ export const HomePage: React.FC = () => {
 
   const handleButtonClick = (item: LinkItem) => {
     if (item.type === 'internal' && item.target) {
-      navigateTo(item.target as any);
+      navigate(item.target as any);
     } else if (item.href) {
       window.open(item.href, '_blank', 'noopener,noreferrer');
     }

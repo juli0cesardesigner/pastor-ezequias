@@ -13,7 +13,7 @@ export const App: React.FC = () => {
   const { currentRoute, navigateTo } = useRoute();
 
   if (currentRoute === 'home') {
-    return <HomePage />;
+    return <HomePage onNavigate={navigateTo} />;
   }
 
   if (currentRoute === 'visitas') {

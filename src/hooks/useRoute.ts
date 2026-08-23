@@ -49,6 +49,7 @@ export function useRoute() {
     const targetPath = route === 'home' ? '/' : `/${route}`;
     if (window.location.pathname !== targetPath) {
       window.history.pushState({}, '', targetPath);
+      window.dispatchEvent(new PopStateEvent('popstate'));
     }
     setCurrentRoute(route);
     window.scrollTo({ top: 0, behavior: 'smooth' });
