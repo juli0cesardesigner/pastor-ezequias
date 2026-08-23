@@ -10,8 +10,8 @@ export const CAMPAIGN_CONFIG: CampaignInfo = {
     '🇧🇷 Acabei de criar minha foto de perfil oficial apoiando o Pastor Ezequias para Deputado Estadual! Crie a sua também e fortaleça nossa campanha:',
   legalNotice:
     'ELEIÇÕES 2026 - EZEQUIAS ALBERTO SOUSA - DEPUTADO ESTADUAL - CNPJ CANDIDATO: 68.545.404/0001-02',
-  instagramUrl: 'https://instagram.com',
-  whatsappGroupUrl: 'https://chat.whatsapp.com',
+  instagramUrl: 'https://www.instagram.com/pastorezequiassousa/',
+  whatsappGroupUrl: 'https://chat.whatsapp.com/GRNBH9JkiFv7bftJrXRIue',
 };
 
 export const DEFAULT_TRANSFORM = {

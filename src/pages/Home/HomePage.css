@@ -1,23 +1,532 @@
-.home-construction-screen {
-  min-height: 100vh;
+/* ==========================================================================
+   🎛️ PAINEL DE CONTROLE DE TAMANHOS E POSIÇÕES (FÁCIL CUSTOMIZAÇÃO)
+   Altere os valores abaixo para ajustar instantaneamente cada elemento:
+   ========================================================================== */
+
+:root {
+  /* ------------------------------------------------------------------------
+     📱 1. CONTROLES MOBILE (CELULARES)
+     ------------------------------------------------------------------------ */
+  /* 🔍 ESCALA GERAL DO BLOCO (Logo + Número + Slogan) */
+  --m-bloco-escala: 1.2;
+  /* Multiplicador de tamanho de todo o bloco (ex: 1 = normal, 1.2 = 20% maior, 0.85 = 15% menor) */
+
+  /* Posição Vertical de Todo o Bloco (Logo + Número + Slogan) */
+  --m-overlay-bottom: 10px;
+  /* Distância do bloco central até o fim da tela */
+
+  /* Botões */
+  --m-buttons-top-padding: clamp(14px, 2.8vh, 24px);
+  /* Distância do topo */
+  --m-buttons-width: 360px;
+  /* Largura do bloco de botões */
+  --m-buttons-height: clamp(42px, 5.4vh, 50px);
+  /* Altura de cada botão */
+  --m-buttons-gap: clamp(8px, 1.4vh, 12px);
+  /* Espaçamento entre botões */
+  --m-buttons-font-size: clamp(0.88rem, 3.6vw, 1rem);
+  /* Tamanho do texto */
+
+  /* Foto do Pastor */
+  --m-foto-height: 85vh;
+  /* Altura da foto */
+  --m-foto-bottom: clamp(0px, 14vh, 0px);
+  /* Posição vertical da foto */
+
+  /* Faixa Verde/Amarela Inferior (Expansível / Ajustável) */
+  --m-faixa-width: 335vw;
+  /* Largura da faixa (ultrapassa as laterais da tela) */
+  --m-faixa-bottom: -86vw;
+  /* Posição vertical da faixa (oculta a parte inferior na base) */
+
+  /* Logo "Pastor Ezequias" */
+  --m-nome-width: clamp(250px, 48vw, 210px);
+  /* Largura do logo */
+  --m-nome-offset-bottom: -19%;
+  /* Ajuste vertical do logo */
+
+  /* Número "15 333" */
+  --m-numero-width: clamp(210px, 72vw, 300px);
+  /* Largura do número 3D */
+  --m-numero-offset-bottom: -6%;
+  /* Ajuste vertical do número */
+
+  /* Slogan "Unidos pelo Espírito Santo" */
+  --m-slogan-width: clamp(110px, 46vw, 260px);
+  /* Largura do slogan */
+
+
+  /* ------------------------------------------------------------------------
+     💻 2. CONTROLES DESKTOP (COMPUTADOR / WIDESCREEN)
+     ------------------------------------------------------------------------ */
+  /* 🔍 ESCALA GERAL DO BLOCO (Logo + Número + Slogan) */
+  --d-bloco-escala: 2;
+  /* Multiplicador de tamanho de todo o bloco no desktop (ex: 1 = normal, 1.2 = 20% maior, 0.85 = 15% menor) */
+
+  /* Posição Vertical de Todo o Bloco (Logo + Número + Slogan) */
+  --d-overlay-bottom: 20px;
+  /* Distância do bloco central até a base da tela (ex: 80px, 50px, 10vh) */
+
+  /* Botões (Grid 2x2 no lado direito) */
+  --d-buttons-top: 26%;
+  /* Posição vertical (traz os botões mais para o meio da tela) */
+  --d-buttons-right: clamp(60px, 12vw, 180px);
+  /* Afasta os botões do canto e centraliza no espaço da direita */
+  --d-buttons-width: clamp(460px, 34vw, 560px);
+  /* Largura total do grupo 2x2 (mais encorpado e imponente) */
+  --d-buttons-height: clamp(54px, 6.8vh, 64px);
+  /* Altura de cada botão */
+  --d-buttons-gap-x: 20px;
+  /* Espaço horizontal entre botões */
+  --d-buttons-gap-y: 18px;
+  /* Espaço vertical entre botões */
+  --d-buttons-font-size: clamp(1rem, 1.15vw, 1.18rem);
+  /* Tamanho do texto */
+
+  /* Foto do Pastor (Lado Esquerdo) */
+  --d-foto-height: 94vh;
+  /* Altura da foto */
+  --d-foto-left: clamp(10px, 2vw, 40px);
+  /* Posição a partir da esquerda */
+  --d-foto-bottom: 0px;
+  /* Posição a partir da base */
+
+  /* Faixa Panorâmica Verde/Amarela (Alinhada na Linha Vermelha / Base) */
+  --d-faixa-width: 150vw;
+  /* Largura da faixa de ponta a ponta da tela */
+  --d-faixa-bottom: -46.5vw;
+  /* Posição vertical da faixa (oculta a metade inferior na base) */
+
+  /* 1. Logo "Pastor Ezequias" (Topo do bloco central) */
+  --d-nome-width: clamp(200px, 18vw, 270px);
+  /* Largura do logo */
+  --d-nome-offset-bottom: -8.5%;
+  /* Aproximação vertical do logo com o número */
+
+  /* 2. Número "15 333" (Meio do bloco central) */
+  --d-numero-width: clamp(320px, 30vw, 460px);
+  /* Largura do número 15 333 */
+  --d-numero-offset-bottom: -1%;
+  /* Aproximação vertical do número com o slogan */
+
+  /* 3. Slogan "Unidos pelo ES" (Base do bloco central) */
+  --d-slogan-width: clamp(170px, 15vw, 230px);
+  /* Largura do slogan */
+}
+
+/* ==========================================================================
+   ESTILOS BASE E ESTRUTURA GERAL (Zero-Scroll strictly fitted to 100dvh)
+   ========================================================================== */
+
+.linktree-page {
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+  max-height: 100dvh;
   width: 100vw;
+  overflow: hidden;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #2b303a;
-  color: #94a3b8;
-  margin: 0;
-  padding: 0;
+  flex-direction: column;
+  background-color: #0d1e44;
+  color: #ffffff;
+  box-sizing: border-box;
+  user-select: none;
+  touch-action: none;
+}
+
+/* Background Layer */
+.linktree-bg-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.linktree-bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Desktop 90deg background rotation */
+@media (min-width: 900px) {
+  .linktree-bg-img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100vh;
+    height: 100vw;
+    transform: translate(-50%, -50%) rotate(90deg);
+    object-fit: cover;
+  }
+}
+
+/* Main Content Container */
+.linktree-container {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100dvh;
+  max-height: 100dvh;
+  width: 100%;
+  overflow: hidden;
   box-sizing: border-box;
 }
 
-.construction-text {
+/* --------------------------------------------------------------------------
+   Buttons Section (Mobile Default)
+   -------------------------------------------------------------------------- */
+.linktree-buttons-section {
+  width: 100%;
+  padding: var(--m-buttons-top-padding) 18px 0 18px;
+  display: flex;
+  justify-content: center;
+  z-index: 10;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.linktree-buttons-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m-buttons-gap);
+  width: 100%;
+  max-width: var(--m-buttons-width);
+}
+
+.linktree-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  width: 100%;
+  height: var(--m-buttons-height);
+  background: #1d4ed8;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-sm);
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: clamp(1.75rem, 5vw, 3rem);
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-size: var(--m-buttons-font-size);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(29, 78, 216, 0.4);
+  transition: var(--transition-normal);
+  padding: 0 16px;
+  text-decoration: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+
+.linktree-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.linktree-btn:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.55);
+}
+
+.linktree-btn:active {
+  transform: scale(0.98);
+}
+
+/* --------------------------------------------------------------------------
+   Visual Section (Mobile Default)
+   -------------------------------------------------------------------------- */
+.linktree-visual-section {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* Photo */
+.linktree-photo-wrap {
+  position: absolute;
+  bottom: var(--m-foto-bottom);
+  z-index: 3;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+.linktree-photo {
+  height: var(--m-foto-height);
+  width: auto;
+  max-width: 82vw;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.45));
+}
+
+/* Graphics Layer */
+.linktree-graphics-wrap {
+  position: relative;
+  width: 100%;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.linktree-wave-mobile {
+  position: absolute;
+  bottom: var(--m-faixa-bottom);
+  left: 50%;
+  transform: translateX(-50%);
+  width: var(--m-faixa-width);
+  max-width: none;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.linktree-wave-desktop {
+  display: none;
+}
+
+/* Candidate Overlays on Mobile */
+.linktree-identity-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  pointer-events: none;
+  padding-bottom: var(--m-overlay-bottom);
+  transform: scale(var(--m-bloco-escala, 1));
+  transform-origin: bottom center;
+}
+
+.linktree-name-img {
+  width: var(--m-nome-width);
+  height: auto;
+  margin-bottom: var(--m-nome-offset-bottom);
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+}
+
+.linktree-number-img {
+  width: var(--m-numero-width);
+  height: auto;
+  margin-bottom: var(--m-numero-offset-bottom);
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.6));
+}
+
+.linktree-slogan-img {
+  width: var(--m-slogan-width);
+  height: auto;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+}
+
+/* ==========================================================================
+   DESKTOP LANDSCAPE LAYOUT (min-width: 900px)
+   ========================================================================== */
+@media (min-width: 900px) {
+  .linktree-page {
+    position: fixed;
+    inset: 0;
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+  }
+
+  .linktree-container {
+    height: 100vh;
+    max-height: 100vh;
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  /* Buttons on Desktop: Positioned on the Right */
+  .linktree-buttons-section {
+    position: absolute;
+    top: var(--d-buttons-top);
+    right: var(--d-buttons-right);
+    width: auto;
+    padding: 0;
+    z-index: 10;
+  }
+
+  .linktree-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--d-buttons-gap-y) var(--d-buttons-gap-x);
+    width: var(--d-buttons-width);
+    max-width: none;
+  }
+
+  .linktree-btn {
+    height: var(--d-buttons-height);
+    font-size: var(--d-buttons-font-size);
+    box-shadow: 0 6px 18px rgba(29, 78, 216, 0.45);
+  }
+
+  /* Visual Section on Desktop */
+  .linktree-visual-section {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    height: 100vh;
+    max-height: 100vh;
+    align-items: flex-start;
+    justify-content: flex-start;
+    overflow: hidden;
+  }
+
+  /* Photo on the Left */
+  .linktree-photo-wrap {
+    position: absolute;
+    bottom: var(--d-foto-bottom);
+    left: var(--d-foto-left);
+    width: auto;
+    height: var(--d-foto-height);
+    margin-bottom: 0;
+    z-index: 3;
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .linktree-photo {
+    width: auto;
+    height: 100%;
+    max-height: var(--d-foto-height);
+    max-width: 44vw;
+    object-fit: contain;
+    object-position: bottom left;
+  }
+
+  /* Desktop Bottom Wave */
+  .linktree-graphics-wrap {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 4;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .linktree-wave-mobile {
+    display: none;
+  }
+
+  .linktree-wave-desktop {
+    display: block;
+    position: absolute;
+    bottom: var(--d-faixa-bottom);
+    left: 50%;
+    transform: translateX(-50%);
+    width: var(--d-faixa-width);
+    max-width: none;
+    height: auto;
+    object-fit: contain;
+    z-index: 2;
+  }
+
+  /* Candidate Overlay Positions on Desktop (Centralizado na Base: Logo -> Número -> Slogan) */
+  .linktree-identity-overlay {
+    position: absolute;
+    inset: auto 0 0 0;
+    bottom: var(--d-overlay-bottom);
+    left: 50%;
+    transform: translateX(-50%) scale(var(--d-bloco-escala, 1));
+    transform-origin: bottom center;
+    width: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    pointer-events: none;
+    z-index: 5;
+    padding-bottom: 0;
+  }
+
+  /* 1. Logo "Pastor Ezequias" (Topo) */
+  .linktree-name-img {
+    position: static;
+    width: var(--d-nome-width);
+    height: auto;
+    margin: 0 0 var(--d-nome-offset-bottom) 0;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+    z-index: 5;
+  }
+
+  /* 2. Número "15 333" (Meio) */
+  .linktree-number-img {
+    position: static;
+    width: var(--d-numero-width);
+    height: auto;
+    margin: 0 0 var(--d-numero-offset-bottom) 0;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.6));
+    z-index: 5;
+  }
+
+  /* 3. Slogan "Unidos pelo ES" (Base) */
+  .linktree-slogan-img {
+    position: static;
+    width: var(--d-slogan-width);
+    height: auto;
+    margin: 0;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+    z-index: 5;
+  }
+}
+
+/* ==========================================================================
+   Aviso Legal Eleitoral Obrigatório (Vertical no Canto)
+   ========================================================================== */
+.linktree-legal-notice {
+  position: absolute;
+  bottom: 8px;
+  right: 6px;
+  z-index: 25;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(0.46rem, 0.65vw, 0.56rem);
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #e2e8f0;
-  opacity: 0.85;
+  white-space: nowrap;
+  pointer-events: none;
   user-select: none;
+}
+
+@media (min-width: 900px) {
+  .linktree-legal-notice {
+    bottom: 12px;
+    right: 8px;
+    font-size: clamp(0.48rem, 0.52vw, 0.58rem);
+    color: rgba(255, 255, 255, 0.48);
+  }
 }
