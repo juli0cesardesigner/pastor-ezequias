@@ -70,7 +70,7 @@
   /* Botões (Grid 2x2 no lado direito) */
   --d-buttons-top: 26%;
   /* Posição vertical (traz os botões mais para o meio da tela) */
-  --d-buttons-right: clamp(60px, 12vw, 180px);
+  --d-buttons-right: clamp(580px, 10vw, 580px);
   /* Afasta os botões do canto e centraliza no espaço da direita */
   --d-buttons-width: clamp(460px, 34vw, 560px);
   /* Largura total do grupo 2x2 (mais encorpado e imponente) */
