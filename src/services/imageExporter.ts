@@ -35,13 +35,35 @@ export async function exportCompositeImage(
 
   return new Promise((resolve) => {
     offscreenCanvas.toBlob(
-      (blob) => {
+      async (blob) => {
         if (!blob) {
           resolve(null);
           return;
         }
 
-        // Trigger native download
+        // Check if Web Share API with files is available (iOS / Android)
+        const file = new File([blob], filename, { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: 'Foto de Perfil - Pastor Ezequias',
+              text: 'Minha foto oficial de apoio ao Pastor Ezequias!',
+            });
+            triggerCelebrationConfetti();
+            resolve(blob);
+            return;
+          } catch (err: any) {
+            // If user closed/cancelled the share sheet, treat it gracefully
+            if (err.name === 'AbortError') {
+              resolve(blob);
+              return;
+            }
+            console.warn('Web Share falhou, caindo para download padrão:', err);
+          }
+        }
+
+        // Fallback: Trigger standard browser download (Desktop / Unsupported browsers)
         const downloadUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = downloadUrl;
