@@ -4,6 +4,7 @@ import { Footer } from './components/Footer/Footer';
 import { HomePage } from './pages/Home/HomePage';
 import { PhotoGeneratorPage } from './pages/PhotoGenerator/PhotoGeneratorPage';
 import { AdminPage } from './pages/Admin/AdminPage';
+import { VisitasMapPage } from './pages/VisitasMap/VisitasMapPage';
 import { useRoute } from './hooks/useRoute';
 import './App.css';
 
@@ -12,6 +13,17 @@ export const App: React.FC = () => {
 
   if (currentRoute === 'home') {
     return <HomePage />;
+  }
+
+  if (currentRoute === 'visitas') {
+    return (
+      <div className="app-container">
+        <main className="main-content visitas-main">
+          <VisitasMapPage />
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
   if (currentRoute === 'admin') {

@@ -1,0 +1,448 @@
+/* Main App Container for Visitas */
+.visitas-app-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 58px);
+  min-height: 550px;
+  width: 100%;
+  background-color: var(--bg-main, #0a0f1d);
+  color: var(--text-primary, #f8fafc);
+  overflow: hidden;
+}
+
+/* Compact Top Navigation Bar */
+.visitas-compact-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 12px;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-gold, #f59e0b);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.8);
+}
+
+.navbar-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+/* Inline Quick Stats Pills */
+.stats-inline-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.stat-pill {
+  font-size: 0.76rem;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-pill strong {
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.stat-pill.pill-green {
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.stat-pill.pill-orange {
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+
+.stat-pill.pill-blue {
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+}
+
+/* Navbar Right Actions */
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Mobile View Tabs */
+.mobile-view-tabs {
+  display: none;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mobile-tab-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mobile-tab-btn.active {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.nav-action-btn {
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.nav-action-btn.btn-subtle {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
+
+.nav-action-btn.btn-subtle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.nav-action-btn.btn-add-visita {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #0a0f1d;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.3);
+}
+
+.nav-action-btn.btn-add-visita:hover {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  transform: translateY(-1px);
+}
+
+/* Workspace Layout: Split View */
+.visitas-workspace {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Left Sidebar Pane */
+.visitas-sidebar-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #0b1120;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  z-index: 10;
+}
+
+.sidebar-filter-header {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Search Box */
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 7px 10px;
+  gap: 6px;
+}
+
+.search-icon {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.search-field {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 0.84rem;
+  outline: none;
+  font-family: inherit;
+}
+
+.search-field::placeholder {
+  color: #64748b;
+}
+
+.search-clear {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0 2px;
+}
+
+/* Filter Chips */
+.filter-chips-row {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.filter-chip {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  flex: 1;
+  text-align: center;
+}
+
+.filter-chip:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #f8fafc;
+}
+
+.filter-chip.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.filter-chip.chip-orange.active {
+  background: rgba(245, 158, 11, 0.18);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.filter-chip.chip-green.active {
+  background: rgba(16, 185, 129, 0.18);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+/* Scrollable Card List */
+.visitas-scroll-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.visitas-scroll-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.visitas-scroll-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.visitas-scroll-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+
+.list-status-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  text-align: center;
+  color: #94a3b8;
+  gap: 10px;
+  margin: auto 0;
+}
+
+.status-icon {
+  font-size: 2rem;
+  opacity: 0.6;
+}
+
+.list-status-box p {
+  margin: 0;
+  font-size: 0.85rem;
+  max-width: 200px;
+}
+
+.btn-add-inline {
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #f59e0b;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mini-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--color-gold, #f59e0b);
+  border-radius: 50%;
+  animation: miniSpin 0.8s linear infinite;
+}
+
+@keyframes miniSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Map Pane */
+.visitas-map-pane {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #070b14;
+}
+
+/* Floating Quick Filter Bar inside Map */
+.map-floating-quick-filters {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  gap: 6px;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(8px);
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.map-filter-pill {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.map-filter-pill:hover {
+  color: #ffffff;
+}
+
+.map-filter-pill.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.map-filter-pill.pill-orange.active {
+  background: rgba(245, 158, 11, 0.25);
+  color: #f59e0b;
+}
+
+.map-filter-pill.pill-green.active {
+  background: rgba(16, 185, 129, 0.25);
+  color: #10b981;
+}
+
+/* Responsive & Mobile Optimization */
+@media (max-width: 860px) {
+  .visitas-app-wrapper {
+    height: calc(100vh - 54px);
+  }
+
+  .btn-text-desktop {
+    display: none;
+  }
+
+  .mobile-view-tabs {
+    display: flex;
+  }
+
+  .stats-inline-strip {
+    display: none;
+  }
+
+  .visitas-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .visitas-workspace.show-mobile-map .visitas-sidebar-pane {
+    display: none;
+  }
+
+  .visitas-workspace.show-mobile-map .visitas-map-pane {
+    display: block;
+    height: 100%;
+  }
+
+  .visitas-workspace.show-mobile-list .visitas-sidebar-pane {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    border-right: none;
+  }
+
+  .visitas-workspace.show-mobile-list .visitas-map-pane {
+    display: none;
+  }
+}

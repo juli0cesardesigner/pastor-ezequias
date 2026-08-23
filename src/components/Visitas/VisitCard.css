@@ -1,0 +1,183 @@
+.visit-card {
+  background: rgba(18, 26, 46, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.visit-card:hover {
+  background: rgba(26, 38, 68, 0.9);
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+.visit-card.card-selected {
+  border-color: var(--color-gold, #f59e0b);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
+  background: rgba(30, 41, 75, 0.95);
+}
+
+.card-visitado {
+  border-left: 4px solid #10b981;
+}
+
+.card-pendente {
+  border-left: 4px solid #f59e0b;
+}
+
+.card-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.card-info-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.card-city-badge {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.card-contact-name {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+/* Status badge button */
+.status-toggle-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+}
+
+.status-toggle-badge.badge-green {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.status-toggle-badge.badge-green:hover {
+  background: rgba(16, 185, 129, 0.3);
+}
+
+.status-toggle-badge.badge-orange {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.status-toggle-badge.badge-orange:hover {
+  background: rgba(245, 158, 11, 0.3);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.card-role {
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.card-meta {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.card-notes {
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-style: italic;
+}
+
+.card-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.action-btn.btn-whatsapp {
+  background: rgba(37, 211, 102, 0.18);
+  color: #25d366;
+  border: 1px solid rgba(37, 211, 102, 0.35);
+}
+
+.action-btn.btn-whatsapp:hover {
+  background: #25d366;
+  color: #0a0f1d;
+}
+
+.no-phone-tag {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+.secondary-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-btn.btn-icon {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 4px 7px;
+  color: #cbd5e1;
+}
+
+.action-btn.btn-icon:hover {
+  background: rgba(59, 130, 246, 0.25);
+}
+
+.action-btn.btn-icon.btn-del:hover {
+  background: rgba(239, 68, 68, 0.25);
+}

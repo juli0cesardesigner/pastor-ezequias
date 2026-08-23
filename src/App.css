@@ -20,6 +20,13 @@
   max-width: 880px;
 }
 
+.main-content.visitas-main {
+  max-width: 100%;
+  padding: 0;
+  margin: 0;
+  display: block;
+}
+
 .uploader-flow-container {
   width: 100%;
   max-width: 440px;
