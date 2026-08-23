@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Phone, Save, Package } from 'lucide-react';
+import { Plus, Edit2, Trash2, Phone, Save, Package, Sparkles } from 'lucide-react';
 import { AdminMaterialEditModal } from './AdminMaterialEditModal';
 import type { MaterialCatalogItem } from '../../../types/materials';
 
@@ -9,6 +9,7 @@ interface AdminCatalogSettingsTabProps {
   isSavingSetting: boolean;
   onSaveItem: (item: MaterialCatalogItem) => Promise<boolean>;
   onDeleteItem: (id: string) => Promise<void>;
+  onSeedDefaults?: () => Promise<void>;
   onSaveWhatsapp: (phone: string) => Promise<void>;
 }
 
@@ -18,6 +19,7 @@ export const AdminCatalogSettingsTab: React.FC<AdminCatalogSettingsTabProps> = (
   isSavingSetting,
   onSaveItem,
   onDeleteItem,
+  onSeedDefaults,
   onSaveWhatsapp
 }) => {
   const [editingItem, setEditingItem] = useState<MaterialCatalogItem | null>(null);
@@ -79,53 +81,79 @@ export const AdminCatalogSettingsTab: React.FC<AdminCatalogSettingsTabProps> = (
             </div>
           </div>
 
-          <button type="button" className="btn-add-material" onClick={handleOpenAdd}>
-            <Plus size={15} />
-            <span>Novo Material</span>
-          </button>
+          <div className="catalog-header-actions">
+            {onSeedDefaults && catalog.length === 0 && (
+              <button type="button" className="btn-seed-defaults" onClick={onSeedDefaults} title="Carregar modelos de exemplo">
+                <Sparkles size={14} />
+                <span>Carregar Sugestões</span>
+              </button>
+            )}
+            <button type="button" className="btn-add-material" onClick={handleOpenAdd}>
+              <Plus size={15} />
+              <span>Novo Material</span>
+            </button>
+          </div>
         </div>
 
-        <div className="admin-catalog-flat-list">
-          {catalog.map((item) => (
-            <div key={item.id} className={`admin-material-row-flat ${item.isActive ? '' : 'inactive'}`}>
-              <div className="admin-row-thumb">
-                {item.imageUrl ? (
-                  <img src={item.imageUrl} alt={item.name} />
-                ) : (
-                  <Package size={20} className="text-gold" />
-                )}
-              </div>
-
-              <div className="admin-row-info">
-                <div className="admin-row-title-line">
-                  <h4 className="admin-row-name">{item.name}</h4>
-                  {item.badgeText && <span className="admin-card-badge">{item.badgeText}</span>}
-                </div>
-                {item.description && <p className="admin-row-desc">{item.description}</p>}
-                
-                <div className="admin-row-meta">
-                  <span className="limit-info">
-                    {item.hasLimit ? `Máx: ${item.maxQuantity} un.` : 'Sem limite'}
-                  </span>
-                  <span className={`status-pill ${item.isActive ? 'active' : 'hidden'}`}>
-                    {item.isActive ? '• Visível' : '• Oculto'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="admin-row-actions">
-                <button type="button" className="btn-edit-item" onClick={() => handleOpenEdit(item)} title="Editar">
-                  <Edit2 size={14} />
-                  <span>Editar</span>
-                </button>
-                <button type="button" className="btn-delete-item" onClick={() => onDeleteItem(item.id)} title="Excluir">
-                  <Trash2 size={14} />
-                  <span>Excluir</span>
-                </button>
-              </div>
+        {catalog.length === 0 ? (
+          <div className="admin-catalog-empty-state">
+            <div className="empty-icon-wrap">
+              <Package size={36} className="text-gold" />
             </div>
-          ))}
-        </div>
+            <h4 className="empty-title">Nenhum material no catálogo</h4>
+            <p className="empty-desc">
+              Você removeu todos os itens de exemplo. Clique no botão <strong>"+ Novo Material"</strong> acima para cadastrar seus materiais reais.
+            </p>
+            {onSeedDefaults && (
+              <button type="button" className="btn-seed-empty" onClick={onSeedDefaults}>
+                <Sparkles size={15} />
+                <span>Ou recarregar modelos sugeridos</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="admin-catalog-flat-list">
+            {catalog.map((item) => (
+              <div key={item.id} className={`admin-material-row-flat ${item.isActive ? '' : 'inactive'}`}>
+                <div className="admin-row-thumb">
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt={item.name} />
+                  ) : (
+                    <Package size={20} className="text-gold" />
+                  )}
+                </div>
+
+                <div className="admin-row-info">
+                  <div className="admin-row-title-line">
+                    <h4 className="admin-row-name">{item.name}</h4>
+                    {item.badgeText && <span className="admin-card-badge">{item.badgeText}</span>}
+                  </div>
+                  {item.description && <p className="admin-row-desc">{item.description}</p>}
+                  
+                  <div className="admin-row-meta">
+                    <span className="limit-info">
+                      {item.hasLimit ? `Máx: ${item.maxQuantity} un.` : 'Sem limite'}
+                    </span>
+                    <span className={`status-pill ${item.isActive ? 'active' : 'hidden'}`}>
+                      {item.isActive ? '• Visível' : '• Oculto'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="admin-row-actions">
+                  <button type="button" className="btn-edit-item" onClick={() => handleOpenEdit(item)} title="Editar">
+                    <Edit2 size={14} />
+                    <span>Editar</span>
+                  </button>
+                  <button type="button" className="btn-delete-item" onClick={() => onDeleteItem(item.id)} title="Excluir">
+                    <Trash2 size={14} />
+                    <span>Excluir</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {isModalOpen && (
@@ -138,3 +166,4 @@ export const AdminCatalogSettingsTab: React.FC<AdminCatalogSettingsTabProps> = (
     </div>
   );
 };
+

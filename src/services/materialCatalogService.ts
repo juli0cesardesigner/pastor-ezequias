@@ -2,8 +2,19 @@ import { sql } from '../config/database';
 import { DEFAULT_MATERIALS_CATALOG } from '../config/materials';
 import type { MaterialCatalogItem } from '../types/materials';
 
+let isCatalogTableInitialized = false;
+
 export async function ensureCatalogTable(): Promise<void> {
+  if (isCatalogTableInitialized) return;
   try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS campaign_settings (
+        key VARCHAR(50) PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
     await sql`
       CREATE TABLE IF NOT EXISTS materials_catalog (
         id VARCHAR(50) PRIMARY KEY,
@@ -20,16 +31,20 @@ export async function ensureCatalogTable(): Promise<void> {
       );
     `;
 
-    const existing = await sql`SELECT count(*)::int as count FROM materials_catalog;`;
-    if (existing[0]?.count === 0) {
-      for (const item of DEFAULT_MATERIALS_CATALOG) {
-        await sql`
-          INSERT INTO materials_catalog (id, name, description, image_url, badge_text, has_limit, max_quantity, is_active, display_order)
-          VALUES (${item.id}, ${item.name}, ${item.description}, ${item.imageUrl || null}, ${item.badgeText || null}, ${item.hasLimit}, ${item.maxQuantity}, ${item.isActive}, ${item.displayOrder})
-          ON CONFLICT (id) DO NOTHING;
-        `;
-      }
+    // Garante que o flag de seed inicial seja registrado para nunca recriar dados após o usuário apagar
+    const seeded = await sql`
+      SELECT value FROM campaign_settings WHERE key = 'catalog_seeded_v1' LIMIT 1;
+    `;
+
+    if (!seeded || seeded.length === 0) {
+      await sql`
+        INSERT INTO campaign_settings (key, value)
+        VALUES ('catalog_seeded_v1', 'true')
+        ON CONFLICT (key) DO UPDATE SET value = 'true';
+      `;
     }
+
+    isCatalogTableInitialized = true;
   } catch (err) {
     console.warn('Tabela materials_catalog aviso:', err);
   }
@@ -54,7 +69,7 @@ export async function fetchMaterialsCatalog(onlyActive = true): Promise<Material
         `;
 
     if (!rows || rows.length === 0) {
-      return DEFAULT_MATERIALS_CATALOG.filter(item => !onlyActive || item.isActive);
+      return [];
     }
 
     return rows.map((row) => ({
@@ -70,7 +85,7 @@ export async function fetchMaterialsCatalog(onlyActive = true): Promise<Material
     }));
   } catch (err) {
     console.error('Erro ao buscar catálogo de materiais:', err);
-    return DEFAULT_MATERIALS_CATALOG.filter(item => !onlyActive || item.isActive);
+    return [];
   }
 }
 
@@ -108,3 +123,24 @@ export async function deleteCatalogItem(id: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Função explícita caso o administrador queira recarregar os materiais padrão sugeridos
+ */
+export async function seedDefaultMaterials(): Promise<boolean> {
+  try {
+    await ensureCatalogTable();
+    for (const item of DEFAULT_MATERIALS_CATALOG) {
+      await sql`
+        INSERT INTO materials_catalog (id, name, description, image_url, badge_text, has_limit, max_quantity, is_active, display_order)
+        VALUES (${item.id}, ${item.name}, ${item.description}, ${item.imageUrl || null}, ${item.badgeText || null}, ${item.hasLimit}, ${item.maxQuantity}, ${item.isActive}, ${item.displayOrder})
+        ON CONFLICT (id) DO NOTHING;
+      `;
+    }
+    return true;
+  } catch (err) {
+    console.error('Erro ao semear materiais sugeridos:', err);
+    return false;
+  }
+}
+

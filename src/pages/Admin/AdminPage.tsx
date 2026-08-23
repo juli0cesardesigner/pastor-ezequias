@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, ArrowLeft, BarChart3, ShoppingBag, Settings, CheckCircle2, AlertCircle } from 'lucide-react';
+import { RefreshCw, ArrowLeft, BarChart3, ShoppingBag, Settings, AlertCircle, Layers } from 'lucide-react';
 import { fetchAdminMetrics } from '../../services/adminService';
 import { useAdminMaterials } from '../../hooks/useAdminMaterials';
 import { AdminMetricsTab } from './components/AdminMetricsTab';
 import { AdminMaterialsRequestsTab } from './components/AdminMaterialsRequestsTab';
 import { AdminCatalogSettingsTab } from './components/AdminCatalogSettingsTab';
 import type { CampaignMetrics, ActivityLogItem } from '../../types/analytics';
-import { CAMPAIGN_CONFIG } from '../../config/campaign';
 import './AdminPage.css';
 
 type AdminTab = 'metrics' | 'materials' | 'catalog';
@@ -37,6 +36,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToSite }) => {
     handleStatusChange,
     handleSaveCatalogItem,
     handleDeleteCatalogItem,
+    handleSeedDefaults,
     handleSaveWhatsapp,
     loadData: refreshMaterialsData,
     exportToCSV
@@ -50,6 +50,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToSite }) => {
       const data = await fetchAdminMetrics();
       setMetrics(data.metrics);
       setLogs(data.recentLogs);
+    } catch (err) {
+      console.error('Erro ao carregar métricas:', err);
     } finally {
       setIsLoadingMetrics(false);
     }
@@ -59,44 +61,48 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToSite }) => {
     loadMetrics();
   }, []);
 
-  const handleRefreshAll = () => {
+  const handleGlobalRefresh = () => {
     loadMetrics();
     refreshMaterialsData();
   };
 
   return (
-    <div className="admin-container animate-fade-in">
-      {feedbackMsg && (
-        <div className={`admin-toast-feedback ${feedbackMsg.type}`}>
-          {feedbackMsg.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-          <span>{feedbackMsg.text}</span>
-        </div>
-      )}
-
+    <div className="admin-container">
+      {/* Header Flat */}
       <div className="admin-header">
-        <div className="admin-header-left">
+        <div>
           <button type="button" className="btn-admin-back" onClick={onBackToSite}>
             <ArrowLeft size={16} />
             <span>Voltar ao Site</span>
           </button>
-          <h1 className="admin-title">
-            Painel da Campanha — <span className="highlight">{CAMPAIGN_CONFIG.candidateName}</span>
-          </h1>
-          <p className="admin-subtitle">
-            Gestão unificada de fotos, apoiadores e pedidos de materiais físicos
-          </p>
+          <h1 className="admin-title">Painel de Coordenação</h1>
+          <p className="admin-subtitle">Gestão em tempo real da campanha do Pastor Ezequias</p>
         </div>
 
         <button
           type="button"
-          className={`btn-admin-refresh ${isGlobalLoading ? 'loading' : ''}`}
-          onClick={handleRefreshAll}
+          className="btn-admin-refresh"
+          onClick={handleGlobalRefresh}
           disabled={isGlobalLoading}
-          title="Atualizar dados agora"
         >
-          <RefreshCw size={16} className={isGlobalLoading ? 'spin-icon' : ''} />
+          <RefreshCw size={15} className={isGlobalLoading ? 'spinner' : ''} />
           <span>{isGlobalLoading ? 'Atualizando...' : 'Atualizar Dados'}</span>
         </button>
+      </div>
+
+      {feedbackMsg && (
+        <div className={`admin-toast-feedback ${feedbackMsg.type}`}>
+          <AlertCircle size={16} />
+          <span>{feedbackMsg.text}</span>
+        </div>
+      )}
+
+      {/* Modern Clean Flat Navigation Bar */}
+      <div className="admin-action-bar-flat">
+        <div className="action-bar-label">
+          <Layers size={15} className="text-gold" />
+          <span>Módulos de Gestão</span>
+        </div>
       </div>
 
       <nav className="admin-nav-tabs">
@@ -149,6 +155,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToSite }) => {
           isSavingSetting={isSavingSetting}
           onSaveItem={handleSaveCatalogItem}
           onDeleteItem={handleDeleteCatalogItem}
+          onSeedDefaults={handleSeedDefaults}
           onSaveWhatsapp={handleSaveWhatsapp}
         />
       )}

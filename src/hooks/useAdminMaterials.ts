@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchMaterialsCatalog, saveCatalogItem, deleteCatalogItem } from '../services/materialCatalogService';
+import { fetchMaterialsCatalog, saveCatalogItem, deleteCatalogItem, seedDefaultMaterials } from '../services/materialCatalogService';
 import {
   fetchMaterialRequests,
   updateMaterialRequestStatus,
@@ -81,6 +81,18 @@ export function useAdminMaterials() {
     setTimeout(() => setFeedbackMsg(null), 4000);
   }, [loadData]);
 
+  const handleSeedDefaults = useCallback(async () => {
+    if (!window.confirm('Deseja carregar a lista de materiais sugeridos/padrão no catálogo?')) return;
+    const success = await seedDefaultMaterials();
+    if (success) {
+      setFeedbackMsg({ text: 'Materiais sugeridos carregados no catálogo!', type: 'success' });
+      await loadData();
+    } else {
+      setFeedbackMsg({ text: 'Erro ao carregar materiais sugeridos.', type: 'error' });
+    }
+    setTimeout(() => setFeedbackMsg(null), 4000);
+  }, [loadData]);
+
   const handleSaveWhatsapp = useCallback(async (phone: string) => {
     setIsSavingSetting(true);
     const success = await saveCampaignSetting('whatsapp_destination', phone);
@@ -150,8 +162,10 @@ export function useAdminMaterials() {
     handleStatusChange,
     handleSaveCatalogItem,
     handleDeleteCatalogItem,
+    handleSeedDefaults,
     handleSaveWhatsapp,
     loadData,
     exportToCSV
   };
 }
+
