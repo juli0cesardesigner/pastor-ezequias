@@ -6,21 +6,42 @@ interface MaterialItemCardProps {
   item: MaterialCatalogItem;
   quantity: number;
   onQuantityChange: (id: string, delta: number) => void;
+  onImageClick?: (item: MaterialCatalogItem) => void;
 }
 
 export const MaterialItemCard: React.FC<MaterialItemCardProps> = ({
   item,
   quantity,
-  onQuantityChange
+  onQuantityChange,
+  onImageClick
 }) => {
   const [imgError, setImgError] = useState(false);
   const isMaxReached = item.hasLimit && quantity >= item.maxQuantity;
+  const hasImage = Boolean(item.imageUrl && !imgError);
+
+  const handleImageClick = () => {
+    if (hasImage && onImageClick) {
+      onImageClick(item);
+    }
+  };
 
   return (
     <div className={`mat-row ${quantity > 0 ? 'selected' : ''}`}>
       <div className="mat-main-info">
-        <div className="mat-icon-wrap">
-          {item.imageUrl && !imgError ? (
+        <div
+          className={`mat-icon-wrap ${hasImage ? 'clickable' : ''}`}
+          onClick={handleImageClick}
+          title={hasImage ? 'Clique para ampliar a foto' : undefined}
+          role={hasImage ? 'button' : undefined}
+          tabIndex={hasImage ? 0 : undefined}
+          onKeyDown={(e) => {
+            if (hasImage && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault();
+              handleImageClick();
+            }
+          }}
+        >
+          {hasImage ? (
             <img
               src={item.imageUrl}
               alt={item.name}

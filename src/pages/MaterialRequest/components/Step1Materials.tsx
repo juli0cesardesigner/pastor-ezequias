@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowRight, AlertTriangle, Loader2, Package } from 'lucide-react';
 import { MaterialItemCard } from './MaterialItemCard';
+import { MaterialImageModal } from './MaterialImageModal';
 import type { MaterialCatalogItem, SelectedMaterialItem } from '../../../types/materials';
 
 interface Step1MaterialsProps {
@@ -23,6 +24,8 @@ export const Step1Materials: React.FC<Step1MaterialsProps> = ({
   onQuantityChange,
   onNext
 }) => {
+  const [previewItem, setPreviewItem] = useState<MaterialCatalogItem | null>(null);
+
   if (isLoading) {
     return (
       <div className="wizard-screen-loading">
@@ -55,6 +58,7 @@ export const Step1Materials: React.FC<Step1MaterialsProps> = ({
             item={item}
             quantity={quantities[item.id] || 0}
             onQuantityChange={onQuantityChange}
+            onImageClick={(clickedItem) => setPreviewItem(clickedItem)}
           />
         ))}
       </div>
@@ -77,6 +81,12 @@ export const Step1Materials: React.FC<Step1MaterialsProps> = ({
           <ArrowRight size={18} />
         </button>
       </div>
+
+      {/* Modal de Ampliação de Foto */}
+      <MaterialImageModal
+        item={previewItem}
+        onClose={() => setPreviewItem(null)}
+      />
     </div>
   );
 };
