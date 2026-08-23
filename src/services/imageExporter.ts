@@ -6,6 +6,15 @@ import confetti from 'canvas-confetti';
 /**
  * Generates an HD 1080x1080 offscreen canvas with full resolution image and downloads it
  */
+function isIOSDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  const ua = window.navigator.userAgent.toLowerCase();
+  const isIos = /iphone|ipad|ipod/.test(ua);
+  const isIpadOS =
+    navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  return isIos || isIpadOS;
+}
+
 export async function exportCompositeImage(
   userImage: HTMLImageElement | null,
   frameImage: HTMLImageElement | null,
@@ -41,29 +50,32 @@ export async function exportCompositeImage(
           return;
         }
 
-        // Check if Web Share API with files is available (iOS / Android)
-        const file = new File([blob], filename, { type: 'image/png' });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({
-              files: [file],
-              title: 'Foto de Perfil - Pastor Ezequias',
-              text: 'Minha foto oficial de apoio ao Pastor Ezequias!',
-            });
-            triggerCelebrationConfetti();
-            resolve(blob);
-            return;
-          } catch (err: any) {
-            // If user closed/cancelled the share sheet, treat it gracefully
-            if (err.name === 'AbortError') {
+        // Use Web Share API EXCLUSIVELY on iOS (iPhone/iPad) because iOS Safari
+        // provides the native "Salvar Imagem" button to save directly into Photos.
+        if (isIOSDevice()) {
+          const file = new File([blob], filename, { type: 'image/png' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({
+                files: [file],
+                title: 'Foto de Perfil - Pastor Ezequias',
+                text: 'Minha foto oficial de apoio ao Pastor Ezequias!',
+              });
+              triggerCelebrationConfetti();
               resolve(blob);
               return;
+            } catch (err: any) {
+              // If user cancelled the share sheet, exit gracefully
+              if (err.name === 'AbortError') {
+                resolve(blob);
+                return;
+              }
+              console.warn('Web Share falhou no iOS, caindo para download padrão:', err);
             }
-            console.warn('Web Share falhou, caindo para download padrão:', err);
           }
         }
 
-        // Fallback: Trigger standard browser download (Desktop / Unsupported browsers)
+        // Direct download for Desktop (Windows/Mac/Linux) and Android devices
         const downloadUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = downloadUrl;
