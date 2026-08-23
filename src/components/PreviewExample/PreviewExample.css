@@ -2,14 +2,11 @@
   width: 100%;
   max-width: 440px;
   margin: 1.5rem auto 0;
-  padding: 1.5rem 1.25rem;
+  padding: 1.25rem 0;
   text-align: center;
-  background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .example-header {
@@ -61,7 +58,7 @@
   height: 82px;
   border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
   border: 1.5px solid rgba(255, 255, 255, 0.12);
   background: #0f172a;
 }

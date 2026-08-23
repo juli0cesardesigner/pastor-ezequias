@@ -8,6 +8,9 @@ function getRouteFromLocation(): PageRoute {
   if (path === '/admin' || path === '/admin/' || path.startsWith('/admin') || hash === 'admin') {
     return 'admin';
   }
+  if (path === '/materiais' || path === '/materiais/' || path.startsWith('/materiais') || hash === 'materiais') {
+    return 'materiais';
+  }
   if (
     path === '/visitas' ||
     path === '/visitas/' ||

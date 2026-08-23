@@ -1,140 +1,157 @@
-import React, { useEffect, useState } from 'react';
-import { Download, Users, TrendingUp, RefreshCw, Activity, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { RefreshCw, ArrowLeft, BarChart3, ShoppingBag, Settings, CheckCircle2, AlertCircle } from 'lucide-react';
 import { fetchAdminMetrics } from '../../services/adminService';
+import { useAdminMaterials } from '../../hooks/useAdminMaterials';
+import { AdminMetricsTab } from './components/AdminMetricsTab';
+import { AdminMaterialsRequestsTab } from './components/AdminMaterialsRequestsTab';
+import { AdminCatalogSettingsTab } from './components/AdminCatalogSettingsTab';
 import type { CampaignMetrics, ActivityLogItem } from '../../types/analytics';
 import { CAMPAIGN_CONFIG } from '../../config/campaign';
 import './AdminPage.css';
+
+type AdminTab = 'metrics' | 'materials' | 'catalog';
 
 interface AdminPageProps {
   onBackToSite: () => void;
 }
 
 export const AdminPage: React.FC<AdminPageProps> = ({ onBackToSite }) => {
+  const [activeTab, setActiveTab] = useState<AdminTab>('materials');
   const [metrics, setMetrics] = useState<CampaignMetrics>({
-    totalVisits: 0,
-    totalDownloads: 0,
-    conversionRate: 0,
-    lastUpdated: '',
+    totalVisits: 0, totalDownloads: 0, conversionRate: 0, lastUpdated: ''
   });
   const [logs, setLogs] = useState<ActivityLogItem[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState<boolean>(true);
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const {
+    requests,
+    catalog,
+    statusFilter,
+    searchTerm,
+    whatsappNumber,
+    isLoading: isLoadingMaterials,
+    isSavingSetting,
+    feedbackMsg,
+    setStatusFilter,
+    setSearchTerm,
+    handleStatusChange,
+    handleSaveCatalogItem,
+    handleDeleteCatalogItem,
+    handleSaveWhatsapp,
+    loadData: refreshMaterialsData,
+    exportToCSV
+  } = useAdminMaterials();
+
+  const isGlobalLoading = isLoadingMetrics || isLoadingMaterials;
+
+  const loadMetrics = async () => {
+    setIsLoadingMetrics(true);
     try {
       const data = await fetchAdminMetrics();
       setMetrics(data.metrics);
       setLogs(data.recentLogs);
     } finally {
-      setIsLoading(false);
+      setIsLoadingMetrics(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    loadMetrics();
   }, []);
+
+  const handleRefreshAll = () => {
+    loadMetrics();
+    refreshMaterialsData();
+  };
 
   return (
     <div className="admin-container animate-fade-in">
+      {feedbackMsg && (
+        <div className={`admin-toast-feedback ${feedbackMsg.type}`}>
+          {feedbackMsg.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+          <span>{feedbackMsg.text}</span>
+        </div>
+      )}
+
       <div className="admin-header">
         <div className="admin-header-left">
           <button type="button" className="btn-admin-back" onClick={onBackToSite}>
             <ArrowLeft size={16} />
-            <span>Ver Gerador de Fotos</span>
+            <span>Voltar ao Site</span>
           </button>
           <h1 className="admin-title">
             Painel da Campanha — <span className="highlight">{CAMPAIGN_CONFIG.candidateName}</span>
           </h1>
           <p className="admin-subtitle">
-            Métricas em tempo real sincronizadas com o banco de dados Neon DB
+            Gestão unificada de fotos, apoiadores e pedidos de materiais físicos
           </p>
         </div>
 
         <button
           type="button"
-          className={`btn-admin-refresh ${isLoading ? 'loading' : ''}`}
-          onClick={loadData}
-          disabled={isLoading}
+          className={`btn-admin-refresh ${isGlobalLoading ? 'loading' : ''}`}
+          onClick={handleRefreshAll}
+          disabled={isGlobalLoading}
           title="Atualizar dados agora"
         >
-          <RefreshCw size={16} className={isLoading ? 'spin-icon' : ''} />
-          <span>{isLoading ? 'Atualizando...' : 'Atualizar Dados'}</span>
+          <RefreshCw size={16} className={isGlobalLoading ? 'spin-icon' : ''} />
+          <span>{isGlobalLoading ? 'Atualizando...' : 'Atualizar Dados'}</span>
         </button>
       </div>
 
-      {/* Cards de Métricas Principais */}
-      <div className="admin-metrics-grid">
-        {/* Card 1: Downloads Reais */}
-        <div className="metric-card spotlight-metric glass-card">
-          <div className="metric-card-header">
-            <div className="metric-icon-box download-bg">
-              <Download size={22} />
-            </div>
-            <span className="metric-badge-live">Contagem Real</span>
-          </div>
-          <div className="metric-value">
-            {metrics.totalDownloads.toLocaleString('pt-BR')}
-          </div>
-          <div className="metric-label">Fotos Reais Baixadas</div>
-          <p className="metric-desc">Total de apoiadores que geraram e baixaram a imagem final</p>
-        </div>
+      <nav className="admin-nav-tabs">
+        <button
+          type="button"
+          className={`admin-nav-tab ${activeTab === 'materials' ? 'active' : ''}`}
+          onClick={() => setActiveTab('materials')}
+        >
+          <ShoppingBag size={18} />
+          <span>Pedidos de Materiais ({requests.length})</span>
+        </button>
 
-        {/* Card 2: Acessos / Visitas */}
-        <div className="metric-card glass-card">
-          <div className="metric-card-header">
-            <div className="metric-icon-box visit-bg">
-              <Users size={22} />
-            </div>
-            <span className="metric-badge-subtle">Contador Público</span>
-          </div>
-          <div className="metric-value">{metrics.totalVisits.toLocaleString('pt-BR')}</div>
-          <div className="metric-label">Visitas Computadas</div>
-          <p className="metric-desc">Acessos únicos registrados com intervalo anti-spam de 1h</p>
-        </div>
+        <button
+          type="button"
+          className={`admin-nav-tab ${activeTab === 'catalog' ? 'active' : ''}`}
+          onClick={() => setActiveTab('catalog')}
+        >
+          <Settings size={18} />
+          <span>Catálogo & WhatsApp</span>
+        </button>
 
-        {/* Card 3: Taxa de Conversão */}
-        <div className="metric-card glass-card">
-          <div className="metric-card-header">
-            <div className="metric-icon-box conversion-bg">
-              <TrendingUp size={22} />
-            </div>
-            <span className="metric-badge-subtle">Engajamento</span>
-          </div>
-          <div className="metric-value">{metrics.conversionRate}%</div>
-          <div className="metric-label">Taxa de Conversão</div>
-          <p className="metric-desc">Percentual de visitantes que concluíram o download da foto</p>
-        </div>
-      </div>
+        <button
+          type="button"
+          className={`admin-nav-tab ${activeTab === 'metrics' ? 'active' : ''}`}
+          onClick={() => setActiveTab('metrics')}
+        >
+          <BarChart3 size={18} />
+          <span>Métricas de Fotos</span>
+        </button>
+      </nav>
 
-      {/* Histórico Recente de Atividade */}
-      <div className="admin-logs-section glass-card">
-        <div className="logs-header">
-          <div className="logs-title">
-            <Activity size={18} className="text-gold" />
-            <span>Últimos Eventos Registrados</span>
-          </div>
-          <span className="logs-last-sync">Atualizado em: {metrics.lastUpdated}</span>
-        </div>
+      {activeTab === 'metrics' && <AdminMetricsTab metrics={metrics} logs={logs} />}
 
-        {logs.length === 0 ? (
-          <div className="logs-empty">Nenhum evento registrado ainda.</div>
-        ) : (
-          <div className="logs-list">
-            {logs.map((item) => (
-              <div key={item.id} className="log-row">
-                <div className="log-type-tag">
-                  {item.eventType === 'download' ? (
-                    <span className="badge-download">📥 Download de Imagem</span>
-                  ) : (
-                    <span className="badge-visit">👁️ Acesso à Página</span>
-                  )}
-                </div>
-                <div className="log-time">{item.createdAt}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {activeTab === 'materials' && (
+        <AdminMaterialsRequestsTab
+          requests={requests}
+          statusFilter={statusFilter}
+          searchTerm={searchTerm}
+          onStatusFilterChange={setStatusFilter}
+          onSearchTermChange={setSearchTerm}
+          onStatusChange={handleStatusChange}
+          onExportCSV={exportToCSV}
+        />
+      )}
+
+      {activeTab === 'catalog' && (
+        <AdminCatalogSettingsTab
+          catalog={catalog}
+          whatsappNumber={whatsappNumber}
+          isSavingSetting={isSavingSetting}
+          onSaveItem={handleSaveCatalogItem}
+          onDeleteItem={handleDeleteCatalogItem}
+          onSaveWhatsapp={handleSaveWhatsapp}
+        />
+      )}
     </div>
   );
 };

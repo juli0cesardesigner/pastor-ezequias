@@ -17,3 +17,11 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+
+.header-subtitle-gold {
+  font-size: clamp(1.1rem, 3.2vw, 1.45rem);
+  font-weight: 700;
+  color: var(--color-gold);
+  margin: 0.4rem 0 0;
+  letter-spacing: -0.01em;
+}

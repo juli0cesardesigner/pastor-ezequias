@@ -1,1 +1,1 @@
-export type PageRoute = 'home' | 'apoio' | 'admin' | 'visitas';
+export type PageRoute = 'home' | 'apoio' | 'admin' | 'materiais' | 'visitas';
