@@ -11,6 +11,7 @@ import {
   X,
   Type,
   Edit3,
+  Check,
 } from 'lucide-react';
 import type { PrompterSettings } from '../hooks/usePrompterStorage';
 
@@ -19,7 +20,8 @@ interface PrompterControlsProps {
   onTogglePlay: () => void;
   onRestart: () => void;
   onBackToEdit: () => void;
-  onOpenDirectEdit: () => void;
+  isInlineEditing: boolean;
+  onToggleInlineEdit: () => void;
   settings: PrompterSettings;
   onUpdateSetting: <K extends keyof PrompterSettings>(key: K, value: PrompterSettings[K]) => void;
   isWakeLocked: boolean;
@@ -33,7 +35,8 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
   isPlaying,
   onTogglePlay,
   onBackToEdit,
-  onOpenDirectEdit,
+  isInlineEditing,
+  onToggleInlineEdit,
   settings,
   onUpdateSetting,
   isFullscreen,
@@ -62,7 +65,7 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
   return (
     <>
       <div
-        className={`prompter-floating-hud ${visible ? 'is-visible' : 'is-hidden'}`}
+        className={`prompter-floating-hud ${visible || isInlineEditing ? 'is-visible' : 'is-hidden'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Barra Superior Compacta */}
@@ -77,21 +80,25 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
           </button>
 
           <div className="prompter-hud-center-info">
-            {estimatedSpeechTime && (
+            {isInlineEditing ? (
+              <span className="prompter-badge-time is-editing" title="Modo de edição direta ativo">
+                ✏️ Editando na Tela
+              </span>
+            ) : estimatedSpeechTime ? (
               <span className="prompter-badge-time" title="Tempo estimado de fala">
                 {estimatedSpeechTime}
               </span>
-            )}
+            ) : null}
           </div>
 
           <div className="prompter-hud-actions-right">
             <button
               type="button"
-              className="prompter-hud-btn icon-btn"
-              onClick={onOpenDirectEdit}
-              title="Editar texto no local (E)"
+              className={`prompter-hud-btn icon-btn ${isInlineEditing ? 'active-edit-btn' : ''}`}
+              onClick={onToggleInlineEdit}
+              title={isInlineEditing ? 'Concluir edição na tela' : 'Editar texto diretamente na tela (E)'}
             >
-              <Edit3 size={17} />
+              {isInlineEditing ? <Check size={18} className="text-amber" /> : <Edit3 size={17} />}
             </button>
 
             <button

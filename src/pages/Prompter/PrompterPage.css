@@ -520,71 +520,42 @@
   animation: modalScale 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.prompter-direct-edit-modal {
-  background: #111113;
-  border: 1px solid #27272a;
-  border-radius: 1.25rem;
+.prompter-inline-screen-textarea {
   width: 100%;
-  max-width: 620px;
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95);
-  overflow: hidden;
-  animation: modalScale 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.direct-edit-body {
-  padding: 1rem 1.5rem;
-  flex: 1;
-  display: flex;
-  min-height: 240px;
-}
-
-.direct-edit-textarea {
-  width: 100%;
-  flex: 1;
-  min-height: 240px;
-  background: #070709;
-  border: 1px solid #27272a;
-  border-radius: 0.75rem;
-  padding: 1rem;
-  color: #ffffff;
-  font-size: 1.15rem;
-  line-height: 1.6;
-  resize: vertical;
+  background: transparent;
+  border: none;
+  border-left: 2px dashed rgba(245, 158, 11, 0.5);
+  padding-left: 0.75rem;
   outline: none;
+  color: inherit;
   font-family: inherit;
+  font-weight: 700;
+  line-height: 1.48;
+  letter-spacing: -0.01em;
+  resize: none;
+  overflow: hidden;
   box-sizing: border-box;
+  white-space: pre-wrap;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  hyphens: none !important;
+  user-select: text;
+  -webkit-user-select: text;
+  caret-color: #fbbf24;
 }
 
-.direct-edit-textarea:focus {
-  border-color: var(--prompter-accent);
+.prompter-badge-time.is-editing {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: #f59e0b;
+  color: #fbbf24;
+  animation: statusPulse 1.6s infinite ease-in-out;
 }
 
-.direct-edit-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1.5rem;
-  border-top: 1px solid #1f1f23;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.direct-edit-stats {
-  font-size: 0.8rem;
-  color: #a1a1aa;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.direct-edit-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin-left: auto;
+.prompter-hud-btn.active-edit-btn {
+  background: #fbbf24;
+  color: #000000;
+  border-color: #fbbf24;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
 }
 
 @keyframes modalScale {
