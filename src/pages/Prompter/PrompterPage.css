@@ -1062,46 +1062,45 @@
   white-space: pre-wrap;
 }
 
-.prompter-text-body {
+.prompter-text-body,
+.prompter-inline-screen-textarea {
   width: 100%;
-  margin: 0;
-  padding: 0;
-  line-height: 1.5;
-  white-space: pre-wrap;
+  max-width: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  color: inherit !important;
+  font-family: inherit !important;
+  font-weight: 700 !important;
+  line-height: 1.5 !important;
+  letter-spacing: -0.01em !important;
+  white-space: pre-wrap !important;
   word-break: normal !important;
   overflow-wrap: break-word !important;
   hyphens: none !important;
+  -webkit-hyphens: none !important;
+  -moz-hyphens: none !important;
+  -ms-hyphens: none !important;
+  box-sizing: border-box !important;
+  display: block;
+}
+
+.prompter-text-body {
   cursor: text;
   user-select: text;
   -webkit-user-select: text;
-  box-sizing: border-box;
 }
 
 .prompter-inline-screen-textarea {
-  width: 100%;
-  background: transparent;
-  border: none;
-  border-left: 2px dashed rgba(245, 158, 11, 0.6);
-  padding: 0 0 0 0.6rem;
-  margin: 0;
-  outline: none;
-  color: inherit;
-  font-family: inherit;
-  font-weight: 700;
-  line-height: 1.5;
-  letter-spacing: -0.01em;
   resize: none;
   overflow: hidden;
-  box-sizing: border-box;
-  white-space: pre-wrap;
-  word-break: normal !important;
-  overflow-wrap: break-word !important;
-  hyphens: none !important;
-  user-select: text;
-  -webkit-user-select: text;
   caret-color: #fbbf24;
   field-sizing: content;
-  display: block;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .prompter-spacer-top {
