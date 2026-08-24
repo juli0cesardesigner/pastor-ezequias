@@ -11,6 +11,16 @@ interface VisitCardProps {
   onDelete: (id: number) => void;
 }
 
+function formatVisitDate(dateStr?: string): string {
+  if (!dateStr || !dateStr.trim()) return '';
+  const trimmed = dateStr.trim();
+  const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    return `${match[3]}/${match[2]}/${match[1]}`;
+  }
+  return trimmed;
+}
+
 export const VisitCard: React.FC<VisitCardProps> = ({
   visita,
   isSelected,
@@ -21,6 +31,7 @@ export const VisitCard: React.FC<VisitCardProps> = ({
 }) => {
   const isVisitado = visita.status === 'visitado';
   const cleanPhone = visita.phone ? visita.phone.replace(/\D/g, '') : '';
+  const formattedDate = formatVisitDate(visita.visitDate);
   const whatsappUrl = cleanPhone
     ? `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(
         `Olá ${visita.contactName}, a paz do Senhor! Sou da equipe do Pastor Ezequias.`
@@ -57,8 +68,9 @@ export const VisitCard: React.FC<VisitCardProps> = ({
 
       {visita.role && <div className="card-role">👔 {visita.role}</div>}
       {visita.address && <div className="card-meta">🏠 {visita.address}</div>}
-      {visita.visitDate && <div className="card-meta">📅 {visita.visitDate}</div>}
+      {formattedDate && <div className="card-meta card-date">📅 {formattedDate}</div>}
       {visita.notes && <div className="card-notes">"{visita.notes}"</div>}
+
 
       <div className="card-actions-row">
         {whatsappUrl ? (

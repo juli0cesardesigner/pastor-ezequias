@@ -228,7 +228,73 @@ export const ESMap: React.FC<ESMapProps> = ({
     );
   };
 
-  // Atualização dos Marcadores no Mapa
+function formatVisitDate(dateStr?: string): string {
+  if (!dateStr || !dateStr.trim()) return '';
+  const trimmed = dateStr.trim();
+  const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    return `${match[3]}/${match[2]}/${match[1]}`;
+  }
+  return trimmed;
+}
+
+interface DistributedVisita extends Visita {
+  displayLat: number;
+  displayLng: number;
+}
+
+/**
+ * Quando várias visitas possuem as mesmas coordenadas (ex: somente cidade informada),
+ * distribui os pinos suavemente em padrão radial/espiral para ficarem lado a lado sem sobreposição.
+ */
+function distributeOverlappingVisitas(visitas: Visita[]): DistributedVisita[] {
+  const groups = new Map<string, Visita[]>();
+
+  visitas.forEach((v) => {
+    const key = `${v.latitude.toFixed(3)}_${v.longitude.toFixed(3)}`;
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key)!.push(v);
+  });
+
+  const result: DistributedVisita[] = [];
+
+  groups.forEach((groupVisitas) => {
+    const count = groupVisitas.length;
+    if (count === 1) {
+      result.push({
+        ...groupVisitas[0],
+        displayLat: groupVisitas[0].latitude,
+        displayLng: groupVisitas[0].longitude,
+      });
+      return;
+    }
+
+    const baseRadius = 0.004;
+    groupVisitas.forEach((v, index) => {
+      const layer = Math.floor(index / 6);
+      const indexInLayer = index % 6;
+      const layerCount = Math.min(count - layer * 6, 6);
+      const radius = baseRadius * (1 + layer * 0.7);
+
+      const angle = (2 * Math.PI * indexInLayer) / layerCount + (layer * Math.PI) / 6;
+      const latOffset = radius * Math.sin(angle);
+      const cosLat = Math.max(0.5, Math.cos((v.latitude * Math.PI) / 180));
+      const lngOffset = (radius * Math.cos(angle)) / cosLat;
+
+      result.push({
+        ...v,
+        displayLat: v.latitude + latOffset,
+        displayLng: v.longitude + lngOffset,
+      });
+    });
+  });
+
+  return result;
+}
+
+  // Atualização dos Marcadores no Mapa com Distribuição sem Sobreposição
   useEffect(() => {
     const map = mapInstanceRef.current;
     const layer = markersLayerRef.current;
@@ -237,11 +303,13 @@ export const ESMap: React.FC<ESMapProps> = ({
     layer.clearLayers();
     markersMapRef.current.clear();
 
-    visitas.forEach((v) => {
+    const distributedVisitas = distributeOverlappingVisitas(visitas);
+
+    distributedVisitas.forEach((v) => {
       const isSelected = v.id === selectedVisitaId;
       const icon = createCustomPinIcon(v.status, isSelected);
 
-      const marker = L.marker([v.latitude, v.longitude], { icon });
+      const marker = L.marker([v.displayLat, v.displayLng], { icon });
       markersMapRef.current.set(v.id, marker);
 
       // Monta conteúdo do Popup
@@ -251,6 +319,7 @@ export const ESMap: React.FC<ESMapProps> = ({
         : '<span class="popup-badge badge-orange">⏳ A Visitar</span>';
 
       const cleanPhone = v.phone ? v.phone.replace(/\D/g, '') : '';
+      const formattedDate = formatVisitDate(v.visitDate);
       const whatsappLink = cleanPhone
         ? `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(
             `Olá ${v.contactName}, a paz do Senhor! Sou da equipe do Pastor Ezequias.`
@@ -270,7 +339,7 @@ export const ESMap: React.FC<ESMapProps> = ({
 
         ${v.role ? `<div class="popup-role">👔 ${v.role}</div>` : ''}
         ${v.address ? `<div class="popup-address">🏠 ${v.address}</div>` : ''}
-        ${v.visitDate ? `<div class="popup-date">📅 ${v.visitDate}</div>` : ''}
+        ${formattedDate ? `<div class="popup-date">📅 ${formattedDate}</div>` : ''}
         ${v.notes ? `<div class="popup-notes">💬 ${v.notes}</div>` : ''}
 
         <div class="popup-actions">
@@ -333,10 +402,11 @@ export const ESMap: React.FC<ESMapProps> = ({
   // Centraliza no marcador e abre o popup quando selecionado externamente
   useEffect(() => {
     if (!selectedVisitaId || !mapInstanceRef.current) return;
-    const selected = visitas.find((v) => v.id === selectedVisitaId);
+    const distributed = distributeOverlappingVisitas(visitas);
+    const selected = distributed.find((v) => v.id === selectedVisitaId);
     if (selected) {
       const targetZoom = Math.max(mapInstanceRef.current.getZoom(), 13);
-      mapInstanceRef.current.flyTo([selected.latitude, selected.longitude], targetZoom, {
+      mapInstanceRef.current.flyTo([selected.displayLat, selected.displayLng], targetZoom, {
         duration: 1.0,
       });
 

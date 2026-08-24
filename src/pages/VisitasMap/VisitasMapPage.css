@@ -150,6 +150,19 @@
   color: #ffffff;
 }
 
+.nav-action-btn.btn-batch-action {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+
+.nav-action-btn.btn-batch-action:hover {
+  background: rgba(245, 158, 11, 0.2);
+  color: #ffffff;
+  border-color: rgba(245, 158, 11, 0.5);
+  transform: translateY(-1px);
+}
+
 .nav-action-btn.btn-add-visita {
   background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #0a0f1d;

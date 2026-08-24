@@ -277,7 +277,72 @@ export async function createVisita(input: VisitaInput): Promise<Visita> {
 }
 
 /**
+ * Cria múltiplas visitas em lote no Neon DB e atualiza o cache local
+ */
+export async function createBatchVisitas(inputs: VisitaInput[]): Promise<Visita[]> {
+  await ensureVisitasTable();
+  if (!inputs || inputs.length === 0) return [];
+
+  const createdList: Visita[] = [];
+
+  for (const input of inputs) {
+    try {
+      const rows = await sql`
+        INSERT INTO campaign_visitas (
+          city,
+          contact_name,
+          status,
+          phone,
+          role,
+          address,
+          notes,
+          visit_date,
+          latitude,
+          longitude
+        )
+        VALUES (
+          ${input.city},
+          ${input.contactName},
+          ${input.status || 'pendente'},
+          ${input.phone || null},
+          ${input.role || null},
+          ${input.address || null},
+          ${input.notes || null},
+          ${input.visitDate || null},
+          ${input.latitude},
+          ${input.longitude}
+        )
+        RETURNING *;
+      `;
+
+      if (rows && rows.length > 0) {
+        createdList.push(mapRowToVisita(rows[0]));
+      } else {
+        createdList.push({
+          id: Date.now() + Math.floor(Math.random() * 10000),
+          ...input,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      console.error('Erro ao inserir item em lote no Neon DB:', err);
+      createdList.push({
+        id: Date.now() + Math.floor(Math.random() * 10000),
+        ...input,
+        createdAt: new Date().toISOString(),
+      });
+    }
+  }
+
+  // Atualiza cache local
+  const current = getLocalVisitasCache();
+  setLocalVisitasCache([...createdList, ...current]);
+  return createdList;
+}
+
+/**
  * Atualiza os dados de uma visita existente
+
  */
 export async function updateVisita(id: number, input: Partial<VisitaInput>): Promise<boolean> {
   await ensureVisitasTable();

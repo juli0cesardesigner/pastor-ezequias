@@ -57,7 +57,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
       setRole('');
       setAddress('');
       setNotes('');
-      setVisitDate(new Date().toISOString().split('T')[0]);
+      setVisitDate('');
       setLat(clickedCoords.lat);
       setLng(clickedCoords.lng);
     } else {
@@ -69,7 +69,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
       setRole('');
       setAddress('');
       setNotes('');
-      setVisitDate(new Date().toISOString().split('T')[0]);
+      setVisitDate('');
       const coords = getCoordinatesForCity('Vitória');
       setLat(coords.lat);
       setLng(coords.lng);
@@ -108,7 +108,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
           role: role.trim() || undefined,
           address: address.trim() || undefined,
           notes: notes.trim() || undefined,
-          visitDate: visitDate || undefined,
+          visitDate: visitDate.trim() || undefined,
           latitude: Number(lat),
           longitude: Number(lng),
         },

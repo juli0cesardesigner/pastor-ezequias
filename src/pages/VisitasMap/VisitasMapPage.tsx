@@ -3,6 +3,7 @@ import type { Visita, VisitaInput, VisitasFilter } from '../../types/visitas';
 import {
   fetchAllVisitas,
   createVisita,
+  createBatchVisitas,
   updateVisita,
   toggleVisitaStatus,
   deleteVisita,
@@ -10,6 +11,7 @@ import {
 } from '../../services/visitasService';
 import { ESMap } from '../../components/Map/ESMap';
 import { VisitModal } from '../../components/Visitas/VisitModal';
+import { BatchVisitModal } from '../../components/Visitas/BatchVisitModal';
 import { VisitCard } from '../../components/Visitas/VisitCard';
 import './VisitasMapPage.css';
 
@@ -23,6 +25,7 @@ export const VisitasMapPage: React.FC = () => {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [editingVisita, setEditingVisita] = useState<Visita | null>(null);
   const [clickedCoords, setClickedCoords] = useState<{
     lat: number;
@@ -125,6 +128,14 @@ export const VisitasMapPage: React.FC = () => {
     }
   };
 
+  const handleSaveBatchVisitas = async (inputs: VisitaInput[]) => {
+    const createdList = await createBatchVisitas(inputs);
+    setVisitas((prev) => [...createdList, ...prev]);
+    if (createdList.length > 0) {
+      setSelectedVisitaId(createdList[0].id);
+    }
+  };
+
   const handleToggleStatus = async (visita: Visita) => {
     const nextStatus = await toggleVisitaStatus(visita.id, visita.status);
     setVisitas((prev) =>
@@ -194,6 +205,15 @@ export const VisitasMapPage: React.FC = () => {
               📋 Lista ({visitas.length})
             </button>
           </div>
+
+          <button
+            type="button"
+            className="nav-action-btn btn-subtle btn-batch-action"
+            onClick={() => setIsBatchModalOpen(true)}
+            title="Importar e cadastrar visitas em lote"
+          >
+            📦 <span className="btn-text-desktop">Em Lote</span>
+          </button>
 
           <button className="nav-action-btn btn-add-visita" onClick={handleOpenNewModal}>
             + <span className="btn-text-desktop">Nova Visita</span>
@@ -327,13 +347,20 @@ export const VisitasMapPage: React.FC = () => {
         </section>
       </div>
 
-      {/* Modal de Cadastro / Edição */}
+      {/* Modal de Cadastro / Edição Individual */}
       <VisitModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveVisita}
         initialData={editingVisita}
         clickedCoords={clickedCoords}
+      />
+
+      {/* Modal de Importação em Lote */}
+      <BatchVisitModal
+        isOpen={isBatchModalOpen}
+        onClose={() => setIsBatchModalOpen(false)}
+        onSaveBatch={handleSaveBatchVisitas}
       />
     </div>
   );
