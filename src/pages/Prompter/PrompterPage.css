@@ -517,31 +517,6 @@
   flex-direction: column;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
   overflow: hidden;
-  animation: modalScale 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.prompter-inline-screen-textarea {
-  width: 100%;
-  background: transparent;
-  border: none;
-  border-left: 2px dashed rgba(245, 158, 11, 0.5);
-  padding-left: 0.75rem;
-  outline: none;
-  color: inherit;
-  font-family: inherit;
-  font-weight: 700;
-  line-height: 1.48;
-  letter-spacing: -0.01em;
-  resize: none;
-  overflow: hidden;
-  box-sizing: border-box;
-  white-space: pre-wrap;
-  word-break: normal !important;
-  overflow-wrap: break-word !important;
-  hyphens: none !important;
-  user-select: text;
-  -webkit-user-select: text;
-  caret-color: #fbbf24;
 }
 
 .prompter-badge-time.is-editing {
@@ -1074,7 +1049,7 @@
   padding: 0 1.5rem;
   box-sizing: border-box;
   font-weight: 700;
-  line-height: 1.48;
+  line-height: 1.5;
   letter-spacing: -0.01em;
 
   /* NUNCA HIFENIZAÇÃO */
@@ -1087,13 +1062,50 @@
   white-space: pre-wrap;
 }
 
-.prompter-spacer-top {
-  height: 38vh;
+.prompter-text-body {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  hyphens: none !important;
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+  box-sizing: border-box;
 }
 
-.prompter-paragraph {
-  margin: 0 0 1.25em 0;
-  transition: color 0.2s ease;
+.prompter-inline-screen-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-left: 2px dashed rgba(245, 158, 11, 0.6);
+  padding: 0 0 0 0.6rem;
+  margin: 0;
+  outline: none;
+  color: inherit;
+  font-family: inherit;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  resize: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  hyphens: none !important;
+  user-select: text;
+  -webkit-user-select: text;
+  caret-color: #fbbf24;
+  field-sizing: content;
+  display: block;
+}
+
+.prompter-spacer-top {
+  height: 38vh;
 }
 
 .prompter-spacer-bottom {

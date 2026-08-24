@@ -236,14 +236,14 @@ export const PrompterPage: React.FC = () => {
     }
   }, []);
 
-  // Auto-ajustar altura da textarea quando estiver em modo de edição direta na tela
+  // Ajustar altura da textarea quando entrar em modo de edição direta na tela
   useEffect(() => {
     if (isInlineEditing && inlineTextareaRef.current) {
-      inlineTextareaRef.current.style.height = 'auto';
-      inlineTextareaRef.current.style.height = `${inlineTextareaRef.current.scrollHeight}px`;
-      inlineTextareaRef.current.focus();
+      const el = inlineTextareaRef.current;
+      el.style.height = `${Math.max(window.innerHeight * 0.8, el.scrollHeight + 150)}px`;
+      el.focus();
     }
-  }, [isInlineEditing, text]);
+  }, [isInlineEditing]);
 
   // Alternar modo de edição direta na tela
   const handleToggleInlineEdit = useCallback(() => {
@@ -492,11 +492,6 @@ export const PrompterPage: React.FC = () => {
     });
   }, [cloudScripts, selectedCategory, searchQuery]);
 
-  // Texto formatado com quebras de parágrafos
-  const renderedParagraphs = useMemo(() => {
-    if (!text.trim()) return [];
-    return text.split(/\n+/).filter(Boolean);
-  }, [text]);
 
   return (
     <div className={`prompter-app-wrapper theme-oled ${settings.textColor}-color`}>
@@ -1022,9 +1017,11 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
                   className="prompter-inline-screen-textarea"
                   value={text}
                   onChange={(e) => {
-                    setText(e.target.value);
-                    e.target.style.height = 'auto';
-                    e.target.style.height = `${e.target.scrollHeight}px`;
+                    const val = e.target.value;
+                    setText(val);
+                    if (e.target.scrollHeight > e.target.clientHeight) {
+                      e.target.style.height = `${e.target.scrollHeight + 100}px`;
+                    }
                   }}
                   placeholder="Digite ou edite o roteiro diretamente na tela..."
                   style={{
@@ -1033,16 +1030,17 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
                   }}
                 />
               ) : (
-                renderedParagraphs.map((para, idx) => (
-                  <p
-                    key={idx}
-                    className="prompter-paragraph"
-                    onDoubleClick={handleToggleInlineEdit}
-                    title="Dê duplo clique para editar este trecho diretamente"
-                  >
-                    {para}
-                  </p>
-                ))
+                <div
+                  className="prompter-text-body"
+                  style={{
+                    fontSize: `${settings.fontSize}px`,
+                    textAlign: settings.textAlign,
+                  }}
+                  onDoubleClick={handleToggleInlineEdit}
+                  title="Dê duplo clique para editar este texto diretamente"
+                >
+                  {text}
+                </div>
               )}
 
               {/* Espaçamento inferior para o texto poder rolar até a última linha */}
