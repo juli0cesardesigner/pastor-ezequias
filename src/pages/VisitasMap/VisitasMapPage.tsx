@@ -47,6 +47,14 @@ export const VisitasMapPage: React.FC = () => {
     loadVisitas();
   }, [loadVisitas]);
 
+  // Garante recálculo das dimensões do mapa ao alternar abas no mobile
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [mobileTab]);
+
   // Estatísticas calculadas
   const stats = useMemo(() => {
     const total = visitas.length;

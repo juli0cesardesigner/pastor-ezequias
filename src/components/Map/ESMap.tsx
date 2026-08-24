@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Visita, VisitStatus } from '../../types/visitas';
@@ -15,13 +15,33 @@ interface ESMapProps {
   onDeleteVisita: (id: number) => void;
 }
 
-// Limites geográficos estritos do Espírito Santo (com margem de segurança suave)
-const ES_BOUNDS: L.LatLngBoundsExpression = [
-  [-21.45, -42.0], // Sudoeste
-  [-17.8, -39.5],  // Nordeste
-];
-
 const ES_CENTER: L.LatLngExpression = [-19.65, -40.55];
+const ES_DEFAULT_ZOOM = 8;
+
+type TileLayerKey = 'dark' | 'streets' | 'satellite';
+
+const TILE_LAYERS: Record<TileLayerKey, { name: string; url: string; subdomains?: string; attribution: string; maxZoom: number }> = {
+  dark: {
+    name: 'Escuro',
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    subdomains: 'abcd',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    maxZoom: 19,
+  },
+  streets: {
+    name: 'Ruas',
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    subdomains: 'abcd',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    maxZoom: 19,
+  },
+  satellite: {
+    name: 'Satélite',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: '&copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics',
+    maxZoom: 19,
+  },
+};
 
 /**
  * Gera ícone SVG customizado com halo luminoso e badge colorido
@@ -68,61 +88,145 @@ export const ESMap: React.FC<ESMapProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
+  const currentTileLayerRef = useRef<L.TileLayer | null>(null);
+  const markersMapRef = useRef<Map<number, L.Marker>>(new Map());
 
-  // Inicialização do Mapa Leaflet
+  const [activeLayer, setActiveLayer] = useState<TileLayerKey>('dark');
+  const [showLayerMenu, setShowLayerMenu] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+
+  // Inicialização do Mapa Leaflet com movimentação e zoom livres e fluidos
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
       center: ES_CENTER,
-      zoom: 8,
-      minZoom: 7,
-      maxZoom: 17,
-      maxBounds: ES_BOUNDS,
-      maxBoundsViscosity: 0.85,
-      zoomControl: false,
+      zoom: ES_DEFAULT_ZOOM,
+      minZoom: 5,
+      maxZoom: 19,
+      zoomControl: false, // Usamos controles customizados estilizados
+      fadeAnimation: true,
+      zoomAnimation: true,
+      markerZoomAnimation: true,
+      inertia: true,
+      inertiaDeceleration: 3000,
+      wheelDebounceTime: 40,
     });
 
-    // Controle de Zoom posicionado no canto superior direito
-    L.control.zoom({ position: 'topright' }).addTo(map);
-
-    // Camada de Mapa Moderna (CartoDB Dark Matter)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 19,
+    // Camada de Mapa Inicial
+    const tileConfig = TILE_LAYERS.dark;
+    const tileLayer = L.tileLayer(tileConfig.url, {
+      attribution: tileConfig.attribution,
+      subdomains: tileConfig.subdomains || 'abc',
+      maxZoom: tileConfig.maxZoom,
     }).addTo(map);
+    currentTileLayerRef.current = tileLayer;
 
     // Camada para os marcadores
     const markersLayer = L.layerGroup().addTo(map);
     markersLayerRef.current = markersLayer;
     mapInstanceRef.current = map;
 
-    // Evento de clique no mapa para pinar visita
+    // Evento de clique no mapa para registrar nova visita
     map.on('click', (e: L.LeafletMouseEvent) => {
       const { lat, lng } = e.latlng;
       const closest = findClosestESMunicipality(lat, lng);
       onMapClick({ lat, lng, suggestedCity: closest.name });
     });
 
-    // Garante renderização fluida e carregamento total de tiles
+    // Garante renderização sem cortes e resposta a redimensionamentos
     const resizeObserver = new ResizeObserver(() => {
       map.invalidateSize();
     });
     if (mapContainerRef.current) {
       resizeObserver.observe(mapContainerRef.current);
     }
-    setTimeout(() => {
+
+    const timer = setTimeout(() => {
       map.invalidateSize();
     }, 150);
 
     return () => {
+      clearTimeout(timer);
       resizeObserver.disconnect();
       map.remove();
       mapInstanceRef.current = null;
     };
   }, [onMapClick]);
+
+  // Atualização dinâmica da camada de tiles (Dark / Ruas / Satélite)
+  const handleChangeTileLayer = useCallback((layerKey: TileLayerKey) => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (currentTileLayerRef.current) {
+      map.removeLayer(currentTileLayerRef.current);
+    }
+
+    const config = TILE_LAYERS[layerKey];
+    const newLayer = L.tileLayer(config.url, {
+      attribution: config.attribution,
+      subdomains: config.subdomains || 'abc',
+      maxZoom: config.maxZoom,
+    }).addTo(map);
+
+    currentTileLayerRef.current = newLayer;
+    setActiveLayer(layerKey);
+    setShowLayerMenu(false);
+  }, []);
+
+  // Controles de Navegação Customizados
+  const handleZoomIn = () => {
+    mapInstanceRef.current?.zoomIn();
+  };
+
+  const handleZoomOut = () => {
+    mapInstanceRef.current?.zoomOut();
+  };
+
+  const handleCenterES = () => {
+    mapInstanceRef.current?.flyTo(ES_CENTER, ES_DEFAULT_ZOOM, {
+      duration: 1.0,
+      easeLinearity: 0.25,
+    });
+  };
+
+  const handleFitAllVisitas = () => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (visitas.length === 0) {
+      handleCenterES();
+      return;
+    }
+
+    const bounds = L.latLngBounds(visitas.map((v) => [v.latitude, v.longitude]));
+    map.flyToBounds(bounds, {
+      padding: [60, 60],
+      maxZoom: 15,
+      duration: 1.2,
+    });
+  };
+
+  const handleLocateMe = () => {
+    const map = mapInstanceRef.current;
+    if (!map || !navigator.geolocation) return;
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        map.flyTo([latitude, longitude], 14, { duration: 1.2 });
+        setIsLocating(false);
+      },
+      (err) => {
+        console.warn('Geolocalização não disponível:', err);
+        setIsLocating(false);
+        alert('Não foi possível obter sua localização atual.');
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
 
   // Atualização dos Marcadores no Mapa
   useEffect(() => {
@@ -131,12 +235,14 @@ export const ESMap: React.FC<ESMapProps> = ({
     if (!map || !layer) return;
 
     layer.clearLayers();
+    markersMapRef.current.clear();
 
     visitas.forEach((v) => {
       const isSelected = v.id === selectedVisitaId;
       const icon = createCustomPinIcon(v.status, isSelected);
 
       const marker = L.marker([v.latitude, v.longitude], { icon });
+      markersMapRef.current.set(v.id, marker);
 
       // Monta conteúdo do Popup
       const isVisitado = v.status === 'visitado';
@@ -224,24 +330,132 @@ export const ESMap: React.FC<ESMapProps> = ({
     });
   }, [visitas, selectedVisitaId, onSelectVisita, onToggleStatus, onEditVisita, onDeleteVisita]);
 
-  // Centraliza no marcador quando selecionado externamente
+  // Centraliza no marcador e abre o popup quando selecionado externamente
   useEffect(() => {
     if (!selectedVisitaId || !mapInstanceRef.current) return;
     const selected = visitas.find((v) => v.id === selectedVisitaId);
     if (selected) {
-      mapInstanceRef.current.flyTo([selected.latitude, selected.longitude], 13, {
-        duration: 1.2,
+      const targetZoom = Math.max(mapInstanceRef.current.getZoom(), 13);
+      mapInstanceRef.current.flyTo([selected.latitude, selected.longitude], targetZoom, {
+        duration: 1.0,
       });
+
+      const marker = markersMapRef.current.get(selectedVisitaId);
+      if (marker) {
+        setTimeout(() => {
+          marker.openPopup();
+        }, 350);
+      }
     }
   }, [selectedVisitaId, visitas]);
 
   return (
     <div className="es-map-wrapper">
       <div id="es-leaflet-map" ref={mapContainerRef} className="es-leaflet-container" />
+
+      {/* Floating Modern Map Controls */}
+      <div className="es-map-floating-controls">
+        {/* Zoom Controls */}
+        <div className="map-ctrl-group">
+          <button
+            type="button"
+            className="map-ctrl-btn"
+            onClick={handleZoomIn}
+            title="Aproximar Zoom (+)"
+            aria-label="Aproximar Zoom"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="map-ctrl-btn"
+            onClick={handleZoomOut}
+            title="Afastar Zoom (-)"
+            aria-label="Afastar Zoom"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+        </div>
+
+        {/* View & Bounds Actions */}
+        <div className="map-ctrl-group">
+          <button
+            type="button"
+            className="map-ctrl-btn"
+            onClick={handleCenterES}
+            title="Centralizar no Espírito Santo"
+            aria-label="Centralizar Espírito Santo"
+          >
+            <span className="ctrl-btn-icon">🗺️</span>
+            <span className="ctrl-btn-tooltip">Centralizar ES</span>
+          </button>
+
+          <button
+            type="button"
+            className="map-ctrl-btn"
+            onClick={handleFitAllVisitas}
+            title="Ajustar visualização para todas as visitas"
+            aria-label="Ver todas as visitas"
+          >
+            <span className="ctrl-btn-icon">📍</span>
+            <span className="ctrl-btn-tooltip">Ver Todas ({visitas.length})</span>
+          </button>
+
+          <button
+            type="button"
+            className={`map-ctrl-btn ${isLocating ? 'is-loading' : ''}`}
+            onClick={handleLocateMe}
+            title="Minha Localização Atual"
+            aria-label="Minha Localização"
+          >
+            <span className="ctrl-btn-icon">{isLocating ? '⏳' : '🎯'}</span>
+            <span className="ctrl-btn-tooltip">Meu Local</span>
+          </button>
+        </div>
+
+        {/* Layer Switcher */}
+        <div className="map-ctrl-group map-layer-ctrl-wrapper">
+          <button
+            type="button"
+            className={`map-ctrl-btn ${showLayerMenu ? 'active' : ''}`}
+            onClick={() => setShowLayerMenu((prev) => !prev)}
+            title="Alterar Camada do Mapa"
+            aria-label="Alterar Camada"
+          >
+            <span className="ctrl-btn-icon">🛰️</span>
+            <span className="ctrl-btn-tooltip">Camadas</span>
+          </button>
+
+          {showLayerMenu && (
+            <div className="map-layer-dropdown">
+              <div className="layer-dropdown-title">Camadas do Mapa</div>
+              {(Object.keys(TILE_LAYERS) as TileLayerKey[]).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`layer-option-btn ${activeLayer === key ? 'active' : ''}`}
+                  onClick={() => handleChangeTileLayer(key)}
+                >
+                  <span className="layer-dot"></span>
+                  <span>{TILE_LAYERS[key].name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Floating Bottom Hint */}
       <div className="es-map-hint">
         <span className="hint-icon">💡</span>
-        <span>Clique em qualquer lugar no mapa do ES para pinar uma nova visita</span>
+        <span>Clique em qualquer local no mapa para adicionar uma visita</span>
       </div>
     </div>
   );
 };
+
