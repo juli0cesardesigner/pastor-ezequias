@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { VisitaInput, VisitStatus } from '../../types/visitas';
-import { ES_MUNICIPALITIES, getCoordinatesForCity } from '../../services/visitasService';
+import { ES_MUNICIPALITIES, getCoordinatesForCity, findMatchingESCity } from '../../services/visitasService';
 import './BatchVisitModal.css';
 
 interface BatchVisitModalProps {
@@ -42,20 +42,6 @@ function createEmptyRow(): BatchRowItem {
 }
 
 /**
- * Reconhece se um texto corresponde a um dos municípios do ES
- */
-function findMatchingESCity(text: string): string | null {
-  const clean = text.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  for (const m of ES_MUNICIPALITIES) {
-    const mClean = m.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    if (mClean === clean || mClean.includes(clean) || clean.includes(mClean)) {
-      return m.name;
-    }
-  }
-  return null;
-}
-
-/**
  * Parser inteligente de linhas de texto (separadas por tab, pipe, vírgula, ponto-e-vírgula ou hífen)
  */
 function parseRawBatchText(rawText: string): BatchRowItem[] {
@@ -67,7 +53,7 @@ function parseRawBatchText(rawText: string): BatchRowItem[] {
   const parsedRows: BatchRowItem[] = [];
 
   lines.forEach((line) => {
-    // Detecta o melhor delimitador: tab, pipe, ponto-e-vírgula, vírgula ou hífen
+    // Detecta o delimitador principal
     let parts: string[] = [];
     if (line.includes('\t')) {
       parts = line.split('\t');
@@ -98,29 +84,40 @@ function parseRawBatchText(rawText: string): BatchRowItem[] {
       contactName = parts[0];
     } else {
       contactName = parts[0];
-
-      // Analisa as demais partes inteligentemente
       const remaining = parts.slice(1);
       const usedIndices = new Set<number>();
 
-      // 1. Procura se alguma parte é cidade do ES
-      remaining.forEach((part, idx) => {
-        if (usedIndices.has(idx)) return;
-        const matchedCity = findMatchingESCity(part);
-        if (matchedCity) {
-          city = matchedCity;
-          usedIndices.add(idx);
+      // Prioridade 1: Verifica se a segunda coluna (parts[1]) é um município do ES
+      if (remaining.length > 0) {
+        const cityCol1 = findMatchingESCity(remaining[0]);
+        if (cityCol1) {
+          city = cityCol1;
+          usedIndices.add(0);
         }
-      });
+      }
+
+      // Se ainda não encontrou município na coluna 1, procura nas outras colunas
+      if (!usedIndices.has(0)) {
+        for (let idx = 0; idx < remaining.length; idx++) {
+          const part = remaining[idx];
+          if (!part || usedIndices.has(idx)) continue;
+          const matchedCity = findMatchingESCity(part);
+          if (matchedCity) {
+            city = matchedCity;
+            usedIndices.add(idx);
+            break;
+          }
+        }
+      }
 
       // 2. Procura se alguma parte é status (visitado / pendente)
       remaining.forEach((part, idx) => {
-        if (usedIndices.has(idx)) return;
-        const lower = part.toLowerCase();
-        if (['visitado', 'sim', 'concluido', 'ok', 'feito'].includes(lower)) {
+        if (!part || usedIndices.has(idx)) return;
+        const lower = part.toLowerCase().trim();
+        if (['visitado', 'sim', 'concluido', 'concluído', 'ok', 'feito', 'visitada'].includes(lower)) {
           status = 'visitado';
           usedIndices.add(idx);
-        } else if (['pendente', 'a visitar', 'nao', 'não', 'aguardando'].includes(lower)) {
+        } else if (['pendente', 'a visitar', 'nao', 'não', 'aguardando', 'em aberto'].includes(lower)) {
           status = 'pendente';
           usedIndices.add(idx);
         }
@@ -128,7 +125,7 @@ function parseRawBatchText(rawText: string): BatchRowItem[] {
 
       // 3. Procura telefone (números)
       remaining.forEach((part, idx) => {
-        if (usedIndices.has(idx)) return;
+        if (!part || usedIndices.has(idx)) return;
         const digits = part.replace(/\D/g, '');
         if (digits.length >= 8 && digits.length <= 13) {
           phone = part;
@@ -138,7 +135,7 @@ function parseRawBatchText(rawText: string): BatchRowItem[] {
 
       // 4. Procura data (YYYY-MM-DD ou DD/MM/YYYY)
       remaining.forEach((part, idx) => {
-        if (usedIndices.has(idx)) return;
+        if (!part || usedIndices.has(idx)) return;
         if (/^\d{4}-\d{2}-\d{2}$/.test(part)) {
           visitDate = part;
           usedIndices.add(idx);
@@ -149,8 +146,8 @@ function parseRawBatchText(rawText: string): BatchRowItem[] {
         }
       });
 
-      // 5. Atribui o restante sequencialmente para Cargo, Endereço e Observações
-      const unused = remaining.filter((_, idx) => !usedIndices.has(idx));
+      // 5. Atribui os campos restantes para Cargo, Endereço e Observações
+      const unused = remaining.filter((p, idx) => p.length > 0 && !usedIndices.has(idx));
       if (unused.length > 0) role = unused[0];
       if (unused.length > 1) address = unused[1];
       if (unused.length > 2) notes = unused.slice(2).join(' - ');

@@ -88,6 +88,56 @@ export const ES_MUNICIPALITIES: ESMunicipality[] = [
 ];
 
 /**
+ * Normaliza texto removendo acentos, pontuação e espaços extras
+ */
+export function normalizeCityText(text: string): string {
+  return text
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+/**
+ * Reconhece se um texto corresponde a um dos 78 municípios do ES com segurança contra falsos positivos
+ */
+export function findMatchingESCity(text: string): string | null {
+  if (!text) return null;
+  const clean = normalizeCityText(text);
+  if (clean.length < 3) return null;
+
+  // 1. Correspondência exata (insensível a maiúsculas e acentos)
+  for (const m of ES_MUNICIPALITIES) {
+    const mClean = normalizeCityText(m.name);
+    if (mClean === clean) {
+      return m.name;
+    }
+  }
+
+  // 2. Prefixo ou sufixo exato (ex: "Sao Gabriel" -> "São Gabriel da Palha", "Barra de Sao Francisco" -> "Barra de São Francisco")
+  for (const m of ES_MUNICIPALITIES) {
+    const mClean = normalizeCityText(m.name);
+    if (mClean.startsWith(clean) || clean.startsWith(mClean)) {
+      return m.name;
+    }
+  }
+
+  // 3. Substring match apenas para termos com pelo menos 4 caracteres
+  if (clean.length >= 4) {
+    for (const m of ES_MUNICIPALITIES) {
+      const mClean = normalizeCityText(m.name);
+      if (mClean.includes(clean)) {
+        return m.name;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Encontra o município capixaba mais próximo de uma coordenada clicada
  */
 export function findClosestESMunicipality(lat: number, lng: number): ESMunicipality {
@@ -108,18 +158,19 @@ export function findClosestESMunicipality(lat: number, lng: number): ESMunicipal
 }
 
 /**
- * Busca coordenada central padrão por nome do município
+ * Busca coordenada central padrão por nome do município (com tolerância a acentos)
  */
 export function getCoordinatesForCity(cityName: string): { lat: number; lng: number } {
-  const match = ES_MUNICIPALITIES.find(
-    (m) => m.name.toLowerCase() === cityName.trim().toLowerCase()
-  );
+  if (!cityName) return { lat: -20.3155, lng: -40.3128 };
+  const clean = normalizeCityText(cityName);
+  const match = ES_MUNICIPALITIES.find((m) => normalizeCityText(m.name) === clean);
   if (match) {
     return { lat: match.lat, lng: match.lng };
   }
   // Coordenada central de Vitória como fallback
   return { lat: -20.3155, lng: -40.3128 };
 }
+
 
 // =================== SERVIÇOS DE PERSISTÊNCIA NO NEON DB ===================
 
