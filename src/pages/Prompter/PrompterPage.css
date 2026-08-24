@@ -520,6 +520,73 @@
   animation: modalScale 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.prompter-direct-edit-modal {
+  background: #111113;
+  border: 1px solid #27272a;
+  border-radius: 1.25rem;
+  width: 100%;
+  max-width: 620px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95);
+  overflow: hidden;
+  animation: modalScale 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.direct-edit-body {
+  padding: 1rem 1.5rem;
+  flex: 1;
+  display: flex;
+  min-height: 240px;
+}
+
+.direct-edit-textarea {
+  width: 100%;
+  flex: 1;
+  min-height: 240px;
+  background: #070709;
+  border: 1px solid #27272a;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  color: #ffffff;
+  font-size: 1.15rem;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.direct-edit-textarea:focus {
+  border-color: var(--prompter-accent);
+}
+
+.direct-edit-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #1f1f23;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.direct-edit-stats {
+  font-size: 0.8rem;
+  color: #a1a1aa;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.direct-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-left: auto;
+}
+
 @keyframes modalScale {
   from { transform: scale(0.95); opacity: 0; }
   to { transform: scale(1); opacity: 1; }

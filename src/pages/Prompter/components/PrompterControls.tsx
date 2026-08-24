@@ -10,6 +10,7 @@ import {
   Minus,
   X,
   Type,
+  Edit3,
 } from 'lucide-react';
 import type { PrompterSettings } from '../hooks/usePrompterStorage';
 
@@ -18,6 +19,7 @@ interface PrompterControlsProps {
   onTogglePlay: () => void;
   onRestart: () => void;
   onBackToEdit: () => void;
+  onOpenDirectEdit: () => void;
   settings: PrompterSettings;
   onUpdateSetting: <K extends keyof PrompterSettings>(key: K, value: PrompterSettings[K]) => void;
   isWakeLocked: boolean;
@@ -31,6 +33,7 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
   isPlaying,
   onTogglePlay,
   onBackToEdit,
+  onOpenDirectEdit,
   settings,
   onUpdateSetting,
   isFullscreen,
@@ -68,20 +71,29 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
             type="button"
             className="prompter-hud-btn icon-btn"
             onClick={onBackToEdit}
-            title="Voltar aos Roteiros (Esc)"
+            title="Voltar à Lista de Roteiros (Esc)"
           >
             <Home size={18} />
           </button>
 
           <div className="prompter-hud-center-info">
             {estimatedSpeechTime && (
-              <span className="prompter-badge-time" title="Tempo estimado de fala na velocidade atual">
+              <span className="prompter-badge-time" title="Tempo estimado de fala">
                 {estimatedSpeechTime}
               </span>
             )}
           </div>
 
           <div className="prompter-hud-actions-right">
+            <button
+              type="button"
+              className="prompter-hud-btn icon-btn"
+              onClick={onOpenDirectEdit}
+              title="Editar texto no local (E)"
+            >
+              <Edit3 size={17} />
+            </button>
+
             <button
               type="button"
               className={`prompter-hud-btn icon-btn ${showSettingsDrawer ? 'active' : ''}`}
@@ -102,9 +114,9 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
           </div>
         </div>
 
-        {/* Barra Inferior com Controles Ergonômicos */}
+        {/* Barra Inferior Centralizada com 3 Controles */}
         <div className="prompter-hud-bottom">
-          {/* Controle de Velocidade */}
+          {/* 1. Controle de Velocidade */}
           <div className="prompter-hud-group speed-group">
             <span className="group-label">Velocidade</span>
             <div className="button-stepper">
@@ -128,7 +140,7 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
             </div>
           </div>
 
-          {/* Botão Central de Play/Pause */}
+          {/* 2. Botão Central de Play/Pause */}
           <div className="prompter-hud-center-play">
             <button
               type="button"
@@ -140,7 +152,7 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
             </button>
           </div>
 
-          {/* Controle de Tamanho da Fonte */}
+          {/* 3. Controle de Tamanho da Fonte */}
           <div className="prompter-hud-group font-group">
             <span className="group-label">Fonte</span>
             <div className="button-stepper">
@@ -162,19 +174,6 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
                 <Plus size={16} />
               </button>
             </div>
-          </div>
-
-          {/* Botão Casinha (Home / Voltar aos Roteiros) */}
-          <div className="prompter-hud-group home-group">
-            <button
-              type="button"
-              className="prompter-hud-btn home-action-btn"
-              onClick={onBackToEdit}
-              title="Voltar aos Roteiros / Início"
-            >
-              <Home size={18} />
-              <span className="btn-label">Início</span>
-            </button>
           </div>
         </div>
       </div>

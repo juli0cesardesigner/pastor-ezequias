@@ -15,6 +15,7 @@ import {
   Edit,
   Tag,
   AlertCircle,
+  Edit3,
 } from 'lucide-react';
 import { usePrompterStorage } from './hooks/usePrompterStorage';
 import { useWakeLock } from './hooks/useWakeLock';
@@ -73,6 +74,10 @@ export const PrompterPage: React.FC = () => {
   const [cloudTitle, setCloudTitle] = useState<string>('');
   const [cloudCategory, setCloudCategory] = useState<string>('Mensagem Pastoral');
   const [isSavingCloud, setIsSavingCloud] = useState<boolean>(false);
+
+  // Edição Direta no Local (durante modo leitura)
+  const [showDirectEditModal, setShowDirectEditModal] = useState<boolean>(false);
+  const [directEditText, setDirectEditText] = useState<string>('');
 
   // Busca e filtros na Nuvem
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -229,6 +234,21 @@ export const PrompterPage: React.FC = () => {
     }
   }, []);
 
+  // Abrir edição direta no local
+  const handleOpenDirectEdit = useCallback(() => {
+    setIsPlaying(false);
+    setDirectEditText(text);
+    setShowDirectEditModal(true);
+  }, [text]);
+
+  // Salvar edição direta e continuar
+  const handleSaveDirectEdit = useCallback(() => {
+    setText(directEditText);
+    setShowDirectEditModal(false);
+    setCopiedNotification('Texto atualizado!');
+    setTimeout(() => setCopiedNotification(null), 2000);
+  }, [directEditText, setText]);
+
   // Motor de rolagem contínua a 60fps usando requestAnimationFrame
   useEffect(() => {
     if (mode !== 'reading' || !isPlaying || showCountdown) {
@@ -285,9 +305,9 @@ export const PrompterPage: React.FC = () => {
   // Atalhos de teclado no Desktop
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Se estiver no editor digitando, não interceptar atalhos de navegação comuns
-      if (mode === 'editor') {
-        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      // Se estiver digitando em modais ou no editor, não interceptar
+      if (mode === 'editor' || showDirectEditModal) {
+        if (mode === 'editor' && (e.metaKey || e.ctrlKey) && e.key === 'Enter') {
           e.preventDefault();
           handleStartReading();
         }
@@ -298,6 +318,9 @@ export const PrompterPage: React.FC = () => {
       if (e.code === 'Space') {
         e.preventDefault();
         togglePlay();
+      } else if (e.key === 'e' || e.key === 'E') {
+        e.preventDefault();
+        handleOpenDirectEdit();
       } else if (e.code === 'ArrowUp') {
         e.preventDefault();
         updateSetting('speed', Math.min(100, settings.speed + 2));
@@ -336,8 +359,10 @@ export const PrompterPage: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
     mode,
+    showDirectEditModal,
     settings.speed,
     handleStartReading,
+    handleOpenDirectEdit,
     togglePlay,
     updateSetting,
     triggerControlsVisibility,
@@ -998,6 +1023,7 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
               onTogglePlay={togglePlay}
               onRestart={handleRestart}
               onBackToEdit={handleBackToEdit}
+              onOpenDirectEdit={handleOpenDirectEdit}
               settings={settings}
               onUpdateSetting={updateSetting}
               isWakeLocked={isWakeLocked}
@@ -1006,6 +1032,83 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
               visible={showControls}
               estimatedSpeechTime={estimatedSpeechTime}
             />
+          )}
+
+          {/* Modal de Edição Direta no Local */}
+          {showDirectEditModal && (
+            <div
+              className="prompter-modal-backdrop"
+              onClick={() => setShowDirectEditModal(false)}
+            >
+              <div
+                className="prompter-direct-edit-modal"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="modal-header">
+                  <div className="header-title-group">
+                    <div className="cloud-icon-badge">
+                      <Edit3 size={18} className="text-amber" />
+                    </div>
+                    <div>
+                      <h2 className="modal-title">Editar Texto no Local</h2>
+                      <p className="modal-subtitle">
+                        Ajuste o texto sem sair da sessão do Teleprompter
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="close-modal-btn"
+                    onClick={() => setShowDirectEditModal(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="direct-edit-body">
+                  <textarea
+                    className="direct-edit-textarea"
+                    value={directEditText}
+                    onChange={(e) => setDirectEditText(e.target.value)}
+                    placeholder="Digite ou edite o roteiro..."
+                    autoFocus
+                  />
+                </div>
+
+                <div className="direct-edit-footer">
+                  <div className="direct-edit-stats">
+                    <span>
+                      <strong>{directEditText.trim().split(/\s+/).filter(Boolean).length}</strong> palavras
+                    </span>
+                    <span className="dot">•</span>
+                    <span>
+                      {calculateSpeechTime(
+                        directEditText.trim().split(/\s+/).filter(Boolean).length,
+                        settings.speed
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="direct-edit-actions">
+                    <button
+                      type="button"
+                      className="cancel-btn"
+                      onClick={() => setShowDirectEditModal(false)}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      className="confirm-save-btn"
+                      onClick={handleSaveDirectEdit}
+                    >
+                      <Check size={16} />
+                      <span>Salvar e Continuar</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       )}
