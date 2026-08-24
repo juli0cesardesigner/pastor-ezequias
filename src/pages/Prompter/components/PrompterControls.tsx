@@ -2,16 +2,14 @@ import React, { useState } from 'react';
 import {
   Play,
   Pause,
-  RotateCcw,
+  Home,
   Sliders,
   Maximize,
   Minimize,
-  Edit3,
   Plus,
   Minus,
   X,
   Type,
-  Sun,
 } from 'lucide-react';
 import type { PrompterSettings } from '../hooks/usePrompterStorage';
 
@@ -32,11 +30,9 @@ interface PrompterControlsProps {
 export const PrompterControls: React.FC<PrompterControlsProps> = ({
   isPlaying,
   onTogglePlay,
-  onRestart,
   onBackToEdit,
   settings,
   onUpdateSetting,
-  isWakeLocked,
   isFullscreen,
   onToggleFullscreen,
   visible,
@@ -66,31 +62,21 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
         className={`prompter-floating-hud ${visible ? 'is-visible' : 'is-hidden'}`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top bar with quick buttons */}
+        {/* Barra Superior Compacta */}
         <div className="prompter-hud-top">
           <button
             type="button"
-            className="prompter-hud-btn icon-btn back-btn"
+            className="prompter-hud-btn icon-btn"
             onClick={onBackToEdit}
-            title="Voltar ao Editor (Esc)"
+            title="Voltar aos Roteiros (Esc)"
           >
-            <Edit3 size={18} />
-            <span className="btn-label-mobile">Editar</span>
+            <Home size={18} />
           </button>
 
-          <div className="prompter-hud-indicators">
-            {isWakeLocked && (
-              <span className="prompter-badge-status" title="Tela mantida sempre ligada (Wake Lock)">
-                <Sun size={12} className="pulse-icon" />
-                <span>Tela Ativa</span>
-              </span>
-            )}
-            <span className="prompter-badge-speed">
-              Velocidade: <strong>{settings.speed}</strong>
-            </span>
+          <div className="prompter-hud-center-info">
             {estimatedSpeechTime && (
               <span className="prompter-badge-time" title="Tempo estimado de fala na velocidade atual">
-                <strong>{estimatedSpeechTime}</strong>
+                {estimatedSpeechTime}
               </span>
             )}
           </div>
@@ -116,8 +102,9 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
           </div>
         </div>
 
-        {/* Bottom primary mobile bar */}
+        {/* Barra Inferior com Controles Ergonômicos */}
         <div className="prompter-hud-bottom">
+          {/* Controle de Velocidade */}
           <div className="prompter-hud-group speed-group">
             <span className="group-label">Velocidade</span>
             <div className="button-stepper">
@@ -125,23 +112,23 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
                 type="button"
                 className="stepper-btn"
                 onClick={decreaseSpeed}
-                title="Diminuir velocidade (Seta para baixo)"
+                title="Diminuir velocidade"
               >
-                <Minus size={18} />
+                <Minus size={16} />
               </button>
               <span className="stepper-val">{settings.speed}</span>
               <button
                 type="button"
                 className="stepper-btn"
                 onClick={increaseSpeed}
-                title="Aumentar velocidade (Seta para cima)"
+                title="Aumentar velocidade"
               >
-                <Plus size={18} />
+                <Plus size={16} />
               </button>
             </div>
           </div>
 
-          {/* Center Main Play/Pause Button */}
+          {/* Botão Central de Play/Pause */}
           <div className="prompter-hud-center-play">
             <button
               type="button"
@@ -153,21 +140,46 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
             </button>
           </div>
 
-          <div className="prompter-hud-group restart-group">
+          {/* Controle de Tamanho da Fonte */}
+          <div className="prompter-hud-group font-group">
+            <span className="group-label">Fonte</span>
+            <div className="button-stepper">
+              <button
+                type="button"
+                className="stepper-btn"
+                onClick={decreaseFontSize}
+                title="Diminuir tamanho da fonte"
+              >
+                <Minus size={16} />
+              </button>
+              <span className="stepper-val">{settings.fontSize}</span>
+              <button
+                type="button"
+                className="stepper-btn"
+                onClick={increaseFontSize}
+                title="Aumentar tamanho da fonte"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* Botão Casinha (Home / Voltar aos Roteiros) */}
+          <div className="prompter-hud-group home-group">
             <button
               type="button"
-              className="prompter-hud-btn restart-action-btn"
-              onClick={onRestart}
-              title="Voltar ao início do texto (R)"
+              className="prompter-hud-btn home-action-btn"
+              onClick={onBackToEdit}
+              title="Voltar aos Roteiros / Início"
             >
-              <RotateCcw size={18} />
-              <span className="btn-label">Reiniciar</span>
+              <Home size={18} />
+              <span className="btn-label">Início</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Settings Drawer / Popover */}
+      {/* Drawer / Modal de Configurações Avançadas */}
       {showSettingsDrawer && (
         <div
           className="prompter-settings-modal-overlay"

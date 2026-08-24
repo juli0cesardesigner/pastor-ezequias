@@ -117,7 +117,7 @@ export const PrompterPage: React.FC = () => {
 
   // Cálculo de tempo de fala dinâmico combinando palavras + velocidade configurada
   const calculateSpeechTime = useCallback((wordsCount: number, speed: number = settings.speed): string => {
-    if (wordsCount <= 0) return '~0s de fala';
+    if (wordsCount <= 0) return '~0s';
     // Calibração: WPM varia proporcionalmente à velocidade ajustada no slider (1 a 100)
     // Velocidade 28 (padrão) = ~130 WPM (ritmo natural de locução)
     const wpm = Math.max(60, Math.round(80 + (speed * 1.8)));
@@ -127,12 +127,12 @@ export const PrompterPage: React.FC = () => {
     const seconds = totalSeconds % 60;
 
     if (minutes === 0) {
-      return `~${seconds}s de fala`;
+      return `~${seconds}s`;
     }
     if (seconds === 0) {
-      return `~${minutes}m de fala`;
+      return `~${minutes}m`;
     }
-    return `~${minutes}m ${seconds}s de fala`;
+    return `~${minutes}m ${seconds}s`;
   }, [settings.speed]);
 
   const estimatedSpeechTime = useMemo(() => {
