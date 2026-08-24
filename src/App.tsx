@@ -6,11 +6,16 @@ import { PhotoGeneratorPage } from './pages/PhotoGenerator/PhotoGeneratorPage';
 import { MaterialRequestPage } from './pages/MaterialRequest/MaterialRequestPage';
 import { AdminPage } from './pages/Admin/AdminPage';
 import { VisitasMapPage } from './pages/VisitasMap/VisitasMapPage';
+import { PrompterPage } from './pages/Prompter/PrompterPage';
 import { useRoute } from './hooks/useRoute';
 import './App.css';
 
 export const App: React.FC = () => {
   const { currentRoute, navigateTo } = useRoute();
+
+  if (currentRoute === 'ppt') {
+    return <PrompterPage />;
+  }
 
   if (currentRoute === 'home') {
     return <HomePage onNavigate={navigateTo} />;

@@ -60,7 +60,18 @@ CREATE TABLE IF NOT EXISTS material_requests (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 6. Inserir Contadores e Configurações Iniciais
+-- 6. Tabela de Roteiros Compartilhados do Teleprompter
+CREATE TABLE IF NOT EXISTS teleprompter_scripts (
+  id BIGSERIAL PRIMARY KEY,
+  title VARCHAR(200) NOT NULL,
+  content TEXT NOT NULL,
+  category VARCHAR(80) NOT NULL DEFAULT 'Geral',
+  is_pinned BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 7. Inserir Contadores e Configurações Iniciais
 INSERT INTO campaign_counters (id, count)
 VALUES 
   ('pastor_ezequias_supporters', 1),

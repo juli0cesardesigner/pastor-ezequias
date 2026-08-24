@@ -22,6 +22,22 @@ function getRouteFromLocation(): PageRoute {
   ) {
     return 'visitas';
   }
+  if (
+    path === '/ppt' ||
+    path === '/ppt/' ||
+    path.startsWith('/ppt') ||
+    path === '/prompter' ||
+    path === '/prompter/' ||
+    path.startsWith('/prompter') ||
+    path === '/teleprompter' ||
+    path === '/teleprompter/' ||
+    path.startsWith('/teleprompter') ||
+    hash === 'ppt' ||
+    hash === 'prompter' ||
+    hash === 'teleprompter'
+  ) {
+    return 'ppt';
+  }
   if (path === '/apoio' || path === '/apoio/' || path.startsWith('/apoio') || hash === 'apoio') {
     return 'apoio';
   }
