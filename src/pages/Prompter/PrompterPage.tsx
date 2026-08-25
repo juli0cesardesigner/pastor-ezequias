@@ -1097,7 +1097,7 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
       {/* ======================================================== */}
       {mode === 'reading' && (
         <div
-          className={`prompter-reading-screen ${settings.mirrorHorizontal ? 'is-mirrored' : ''} ${settings.forceLandscape ? 'force-landscape' : ''}`}
+          className={`prompter-reading-screen ${settings.mirrorHorizontal ? 'is-mirrored' : ''} ${settings.forceLandscape ? 'force-landscape' : ''} ${isInlineEditing ? 'is-inline-editing-active' : ''}`}
           onClick={handleScreenClick}
           onMouseMove={triggerControlsVisibility}
           onTouchStart={handleTouchStart}

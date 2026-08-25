@@ -65,8 +65,30 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
     onUpdateSetting('fontSize', Math.max(20, settings.fontSize - 4));
   };
 
-  const toggleLandscape = () => {
-    onUpdateSetting('forceLandscape', !settings.forceLandscape);
+  const toggleLandscape = async () => {
+    const nextVal = !settings.forceLandscape;
+    onUpdateSetting('forceLandscape', nextVal);
+
+    if (nextVal) {
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen().catch(() => {});
+        }
+        // @ts-ignore
+        if (screen.orientation && typeof screen.orientation.lock === 'function') {
+          // @ts-ignore
+          await screen.orientation.lock('landscape').catch(() => {});
+        }
+      } catch {}
+    } else {
+      try {
+        // @ts-ignore
+        if (screen.orientation && typeof screen.orientation.unlock === 'function') {
+          // @ts-ignore
+          screen.orientation.unlock();
+        }
+      } catch {}
+    }
   };
 
   return (

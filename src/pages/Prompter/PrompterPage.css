@@ -1065,6 +1065,33 @@
   overflow: hidden !important;
 }
 
+/* Quando estiver em modo de edição direta no celular mantido na vertical, alinhar texto ao teclado */
+.prompter-reading-screen.force-landscape.is-inline-editing-active {
+  transform: none !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+}
+
+.prompter-reading-screen.force-landscape.is-inline-editing-active .prompter-spacer-top {
+  height: 12vh !important;
+}
+
+.prompter-reading-screen.force-landscape.is-inline-editing-active .prompter-floating-hud {
+  justify-content: space-between !important;
+  padding: 0.85rem !important;
+}
+
+.prompter-reading-screen.force-landscape.is-inline-editing-active .prompter-hud-portrait-wrap {
+  display: flex !important;
+}
+
+.prompter-reading-screen.force-landscape.is-inline-editing-active .prompter-hud-landscape-dock {
+  display: none !important;
+}
+
 .prompter-reading-screen.is-mirrored .prompter-text-column {
   transform: scaleX(-1);
 }
