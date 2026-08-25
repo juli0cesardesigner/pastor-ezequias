@@ -245,14 +245,14 @@ export const PrompterPage: React.FC = () => {
     }
   }, []);
 
-  // Ajustar altura da textarea quando entrar em modo de edição direta na tela
-  useEffect(() => {
-    if (isInlineEditing && inlineTextareaRef.current) {
-      const el = inlineTextareaRef.current;
-      el.style.height = `${Math.max(window.innerHeight * 0.8, el.scrollHeight + 150)}px`;
-      el.focus();
-    }
-  }, [isInlineEditing]);
+  // Texto temporário de edição rápida
+  const [tempEditText, setTempEditText] = useState<string>('');
+  const touchStateRef = useRef<{
+    startX: number;
+    startY: number;
+    startScroll: number;
+    isDragging: boolean;
+  } | null>(null);
 
   // Alternar modo de edição direta na tela
   const handleToggleInlineEdit = useCallback(() => {
@@ -260,12 +260,21 @@ export const PrompterPage: React.FC = () => {
       const next = !prev;
       if (next) {
         setIsPlaying(false);
-      } else {
-        setCopiedNotification('Texto salvo!');
-        setTimeout(() => setCopiedNotification(null), 2000);
+        setTempEditText(text);
       }
       return next;
     });
+  }, [text]);
+
+  const handleSaveInlineEdit = useCallback(() => {
+    setText(tempEditText);
+    setIsInlineEditing(false);
+    setCopiedNotification('Texto salvo com sucesso!');
+    setTimeout(() => setCopiedNotification(null), 2500);
+  }, [tempEditText, setText]);
+
+  const handleCancelInlineEdit = useCallback(() => {
+    setIsInlineEditing(false);
   }, []);
 
   // Motor de rolagem contínua a 60fps usando requestAnimationFrame
@@ -316,10 +325,77 @@ export const PrompterPage: React.FC = () => {
 
   // Sincronizar scroll quando o usuário rolar manualmente com o dedo/mouse
   const handleManualScroll = () => {
-    if (scrollerRef.current) {
+    if (scrollerRef.current && !touchStateRef.current?.isDragging) {
       currentScrollRef.current = scrollerRef.current.scrollTop;
     }
   };
+
+  // Gestos de Touch para percorrer o script (para cima / para baixo) em qualquer orientação
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (isInlineEditing) return;
+    if (e.touches.length === 1 && scrollerRef.current) {
+      touchStateRef.current = {
+        startX: e.touches[0].clientX,
+        startY: e.touches[0].clientY,
+        startScroll: scrollerRef.current.scrollTop,
+        isDragging: false,
+      };
+    }
+    triggerControlsVisibility();
+  }, [isInlineEditing, triggerControlsVisibility]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (isInlineEditing || !touchStateRef.current || !scrollerRef.current) return;
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+    const totalDx = currentX - touchStateRef.current.startX;
+    const totalDy = currentY - touchStateRef.current.startY;
+
+    if (!touchStateRef.current.isDragging && (Math.abs(totalDx) > 5 || Math.abs(totalDy) > 5)) {
+      touchStateRef.current.isDragging = true;
+    }
+
+    if (touchStateRef.current.isDragging) {
+      let scrollDelta = 0;
+      if (settings.forceLandscape) {
+        // No modo paisagem forçado (90°): arrastar o dedo na tela desloca o texto com precisão
+        if (Math.abs(totalDx) >= Math.abs(totalDy)) {
+          scrollDelta = -totalDx * 1.5;
+        } else {
+          scrollDelta = -totalDy * 1.5;
+        }
+      } else {
+        // No modo retrato: arrastar verticalmente
+        scrollDelta = -totalDy * 1.3;
+      }
+
+      const maxScroll = scrollerRef.current.scrollHeight - scrollerRef.current.clientHeight;
+      const targetScroll = Math.max(0, Math.min(maxScroll, touchStateRef.current.startScroll + scrollDelta));
+      scrollerRef.current.scrollTop = targetScroll;
+      currentScrollRef.current = targetScroll;
+    }
+  }, [isInlineEditing, settings.forceLandscape]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (touchStateRef.current?.isDragging) {
+      setTimeout(() => {
+        if (touchStateRef.current) {
+          touchStateRef.current.isDragging = false;
+        }
+      }, 100);
+    }
+  }, []);
+
+  // Rolagem por mousewheel / trackpad
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (isInlineEditing || !scrollerRef.current) return;
+    const delta = e.deltaY || e.deltaX;
+    const maxScroll = scrollerRef.current.scrollHeight - scrollerRef.current.clientHeight;
+    const targetScroll = Math.max(0, Math.min(maxScroll, scrollerRef.current.scrollTop + delta));
+    scrollerRef.current.scrollTop = targetScroll;
+    currentScrollRef.current = targetScroll;
+    triggerControlsVisibility();
+  }, [isInlineEditing, triggerControlsVisibility]);
 
   // Atalhos de teclado no Desktop
   useEffect(() => {
@@ -436,13 +512,14 @@ export const PrompterPage: React.FC = () => {
     };
   }, [mode, settings.forceLandscape]);
 
-  // Iniciar toque na tela de leitura
-  const handleScreenClick = () => {
+  // Iniciar toque na tela de leitura (apenas se não estiver arrastando/scrollando)
+  const handleScreenClick = useCallback(() => {
     if (mode !== 'reading') return;
     if (showCountdown) return;
-    if (isInlineEditing) return; // Não pausar se estiver tocando para editar texto
+    if (isInlineEditing) return;
+    if (touchStateRef.current?.isDragging) return;
     togglePlay();
-  };
+  }, [mode, showCountdown, isInlineEditing, togglePlay]);
 
   // Abrir modal de salvar na nuvem
   const handleOpenSaveCloudModal = (existing?: CloudScript | null) => {
@@ -1026,7 +1103,10 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
           className={`prompter-reading-screen ${settings.mirrorHorizontal ? 'is-mirrored' : ''} ${settings.forceLandscape ? 'force-landscape' : ''}`}
           onClick={handleScreenClick}
           onMouseMove={triggerControlsVisibility}
-          onTouchStart={triggerControlsVisibility}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onWheel={handleWheel}
         >
           {/* Contagem regressiva */}
           {showCountdown && (
@@ -1052,7 +1132,7 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
             onScroll={handleManualScroll}
           >
             <div
-              className={`prompter-text-column ${isInlineEditing ? 'is-editing-mode' : ''}`}
+              className="prompter-text-column"
               style={{
                 maxWidth: `${settings.maxWidth}px`,
                 fontSize: `${settings.fontSize}px`,
@@ -1062,37 +1142,17 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
               {/* Espaçamento superior para o texto iniciar na altura da linha guia */}
               <div className="prompter-spacer-top" />
 
-              {isInlineEditing ? (
-                <textarea
-                  ref={inlineTextareaRef}
-                  className="prompter-inline-screen-textarea"
-                  value={text}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setText(val);
-                    if (e.target.scrollHeight > e.target.clientHeight) {
-                      e.target.style.height = `${e.target.scrollHeight + 100}px`;
-                    }
-                  }}
-                  placeholder="Digite ou edite o roteiro diretamente na tela..."
-                  style={{
-                    fontSize: `${settings.fontSize}px`,
-                    textAlign: settings.textAlign,
-                  }}
-                />
-              ) : (
-                <div
-                  className="prompter-text-body"
-                  style={{
-                    fontSize: `${settings.fontSize}px`,
-                    textAlign: settings.textAlign,
-                  }}
-                  onDoubleClick={handleToggleInlineEdit}
-                  title="Dê duplo clique para editar este texto diretamente"
-                >
-                  {text}
-                </div>
-              )}
+              <div
+                className="prompter-text-body"
+                style={{
+                  fontSize: `${settings.fontSize}px`,
+                  textAlign: settings.textAlign,
+                }}
+                onDoubleClick={handleToggleInlineEdit}
+                title="Dê duplo clique para editar este texto diretamente"
+              >
+                {text}
+              </div>
 
               {/* Espaçamento inferior para o texto poder rolar até a última linha */}
               <div className="prompter-spacer-bottom">
@@ -1120,6 +1180,66 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
               visible={showControls}
               estimatedSpeechTime={estimatedSpeechTime}
             />
+          )}
+
+          {/* Modal / Overlay de Edição Rápida na Tela (Sempre alinhado ao teclado da tela) */}
+          {isInlineEditing && (
+            <div className="prompter-quick-edit-overlay" onClick={(e) => e.stopPropagation()}>
+              <div className="quick-edit-card">
+                <div className="quick-edit-header">
+                  <div className="quick-edit-title">
+                    <Edit size={18} className="text-amber" />
+                    <h3>Editar Roteiro na Tela</h3>
+                  </div>
+                  <div className="quick-edit-header-actions">
+                    <button
+                      type="button"
+                      className="quick-edit-cancel-btn"
+                      onClick={handleCancelInlineEdit}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      className="quick-edit-save-btn"
+                      onClick={handleSaveInlineEdit}
+                    >
+                      <Check size={16} /> Salvar
+                    </button>
+                  </div>
+                </div>
+
+                <div className="quick-edit-body">
+                  <textarea
+                    ref={inlineTextareaRef}
+                    className="quick-edit-textarea"
+                    value={tempEditText}
+                    onChange={(e) => setTempEditText(e.target.value)}
+                    placeholder="Digite ou edite o texto do roteiro..."
+                    autoFocus
+                  />
+                </div>
+
+                <div className="quick-edit-footer">
+                  <div className="quick-edit-stats">
+                    <span>
+                      <strong>{tempEditText.trim().split(/\s+/).filter(Boolean).length}</strong> palavras
+                    </span>
+                    <span className="dot-divider">•</span>
+                    <span>
+                      <strong>{calculateSpeechTime(tempEditText.trim().split(/\s+/).filter(Boolean).length, settings.speed)}</strong>
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="quick-edit-confirm-btn"
+                    onClick={handleSaveInlineEdit}
+                  >
+                    <Check size={16} /> Salvar e Continuar Leitura
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       )}
