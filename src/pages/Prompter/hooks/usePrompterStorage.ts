@@ -12,9 +12,10 @@ export interface PrompterSettings {
   speed: number; // 1 to 100
   maxWidth: number; // in px (e.g. 480 to 1200)
   lineGuide: boolean; // show reading guide line
-  textColor: 'white' | 'amber' | 'cyan';
+  textColor: 'contrast-21' | 'white' | 'yellow-hiviz' | 'amber' | 'cyan';
   textAlign: 'left' | 'center';
   mirrorHorizontal: boolean;
+  forceLandscape: boolean; // girar 90 graus / modo paisagem em celulares
 }
 
 const STORAGE_KEYS = {
@@ -28,9 +29,10 @@ const DEFAULT_SETTINGS: PrompterSettings = {
   speed: 28,
   maxWidth: 820,
   lineGuide: true,
-  textColor: 'white',
+  textColor: 'contrast-21',
   textAlign: 'center',
   mirrorHorizontal: false,
+  forceLandscape: false,
 };
 
 export function usePrompterStorage() {

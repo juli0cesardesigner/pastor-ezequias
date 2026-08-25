@@ -184,6 +184,7 @@ export const PrompterPage: React.FC = () => {
     if (!text.trim()) return;
     setMode('reading');
     setShowCountdown(true);
+    setShowControls(false);
     currentScrollRef.current = 0;
     if (scrollerRef.current) {
       scrollerRef.current.scrollTop = 0;
@@ -194,7 +195,10 @@ export const PrompterPage: React.FC = () => {
   const handleCountdownComplete = () => {
     setShowCountdown(false);
     setIsPlaying(true);
-    triggerControlsVisibility();
+    setShowControls(false);
+    if (hideControlsTimerRef.current) {
+      clearTimeout(hideControlsTimerRef.current);
+    }
   };
 
   // Alternar Play/Pause
@@ -205,9 +209,14 @@ export const PrompterPage: React.FC = () => {
     setIsPlaying((prev) => {
       const next = !prev;
       if (next) {
+        // Ao clicar no PLAY (iniciar reprodução): ocultar IMEDIATAMENTE todos os botões
         lastTimeRef.current = null;
-        triggerControlsVisibility();
+        setShowControls(false);
+        if (hideControlsTimerRef.current) {
+          clearTimeout(hideControlsTimerRef.current);
+        }
       } else {
+        // Ao pausar: exibir botões de controle
         setShowControls(true);
         if (hideControlsTimerRef.current) {
           clearTimeout(hideControlsTimerRef.current);
@@ -215,7 +224,7 @@ export const PrompterPage: React.FC = () => {
       }
       return next;
     });
-  }, [isInlineEditing, triggerControlsVisibility]);
+  }, [isInlineEditing]);
 
   // Reiniciar rolagem ao topo
   const handleRestart = useCallback(() => {
@@ -360,6 +369,10 @@ export const PrompterPage: React.FC = () => {
       } else if (e.key === 'r' || e.key === 'R') {
         e.preventDefault();
         handleRestart();
+      } else if (e.key === 'o' || e.key === 'O') {
+        e.preventDefault();
+        updateSetting('forceLandscape', !settings.forceLandscape);
+        triggerControlsVisibility();
       } else if (e.key === 'f' || e.key === 'F') {
         e.preventDefault();
         toggleFullscreen();
@@ -375,6 +388,7 @@ export const PrompterPage: React.FC = () => {
     mode,
     isInlineEditing,
     settings.speed,
+    settings.forceLandscape,
     handleStartReading,
     handleToggleInlineEdit,
     togglePlay,
@@ -384,6 +398,43 @@ export const PrompterPage: React.FC = () => {
     toggleFullscreen,
     handleBackToEdit,
   ]);
+
+  // Sincronizar bloqueio de orientação de tela do dispositivo quando suportado
+  useEffect(() => {
+    if (mode === 'reading' && settings.forceLandscape) {
+      try {
+        // @ts-ignore - Screen Orientation API
+        if (screen.orientation && typeof screen.orientation.lock === 'function') {
+          // @ts-ignore
+          screen.orientation.lock('landscape').catch(() => {});
+        }
+      } catch {
+        // Ignorar em navegadores sem suporte
+      }
+    } else {
+      try {
+        // @ts-ignore
+        if (screen.orientation && typeof screen.orientation.unlock === 'function') {
+          // @ts-ignore
+          screen.orientation.unlock();
+        }
+      } catch {
+        // Ignorar
+      }
+    }
+
+    return () => {
+      try {
+        // @ts-ignore
+        if (screen.orientation && typeof screen.orientation.unlock === 'function') {
+          // @ts-ignore
+          screen.orientation.unlock();
+        }
+      } catch {
+        // Ignorar
+      }
+    };
+  }, [mode, settings.forceLandscape]);
 
   // Iniciar toque na tela de leitura
   const handleScreenClick = () => {
@@ -494,7 +545,7 @@ export const PrompterPage: React.FC = () => {
 
 
   return (
-    <div className={`prompter-app-wrapper theme-oled ${settings.textColor}-color`}>
+    <div className={`prompter-app-wrapper theme-oled ${settings.textColor}-color ${settings.forceLandscape ? 'is-forced-landscape' : ''}`}>
       {/* ======================================================== */}
       {/* MODO EDITOR                                              */}
       {/* ======================================================== */}
@@ -972,7 +1023,7 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
       {/* ======================================================== */}
       {mode === 'reading' && (
         <div
-          className={`prompter-reading-screen ${settings.mirrorHorizontal ? 'is-mirrored' : ''}`}
+          className={`prompter-reading-screen ${settings.mirrorHorizontal ? 'is-mirrored' : ''} ${settings.forceLandscape ? 'force-landscape' : ''}`}
           onClick={handleScreenClick}
           onMouseMove={triggerControlsVisibility}
           onTouchStart={triggerControlsVisibility}
