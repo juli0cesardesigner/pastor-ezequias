@@ -10,11 +10,11 @@ import {
   Minus,
   X,
   Type,
-  Edit3,
   Check,
   RotateCw,
   Smartphone,
   Contrast,
+  CornerDownLeft,
 } from 'lucide-react';
 import type { PrompterSettings } from '../hooks/usePrompterStorage';
 
@@ -116,8 +116,8 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
 
             <div className="prompter-hud-center-info">
               {isInlineEditing ? (
-                <span className="prompter-badge-time is-editing" title="Modo de edição direta ativo">
-                  ✏️ Editando na Tela
+                <span className="prompter-badge-time is-editing" title="Modo de ajuste de quebras e ritmo">
+                  ✂️ Ajuste de Frases (Toque no texto)
                 </span>
               ) : estimatedSpeechTime ? (
                 <span className="prompter-badge-time" title="Tempo estimado de fala">
@@ -144,9 +144,9 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
                 type="button"
                 className={`prompter-hud-btn icon-btn ${isInlineEditing ? 'active-edit-btn' : ''}`}
                 onClick={onToggleInlineEdit}
-                title={isInlineEditing ? 'Concluir edição na tela' : 'Editar texto diretamente na tela (E)'}
+                title={isInlineEditing ? 'Concluir ajuste de quebras' : 'Ajustar quebras de frases e saltos de linha (↵ / ⌫)'}
               >
-                {isInlineEditing ? <Check size={18} className="text-amber" /> : <Edit3 size={17} />}
+                {isInlineEditing ? <Check size={18} className="text-amber" /> : <CornerDownLeft size={17} />}
               </button>
 
               <button
@@ -265,9 +265,9 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
               type="button"
               className={`prompter-hud-circle-btn ${isInlineEditing ? 'active-edit-btn' : ''}`}
               onClick={onToggleInlineEdit}
-              title={isInlineEditing ? 'Concluir edição na tela' : 'Editar texto diretamente na tela (E)'}
+              title={isInlineEditing ? 'Concluir ajuste de quebras' : 'Ajustar quebras de frases e saltos de linha (↵ / ⌫)'}
             >
-              {isInlineEditing ? <Check size={18} className="text-amber" /> : <Edit3 size={17} />}
+              {isInlineEditing ? <Check size={18} className="text-amber" /> : <CornerDownLeft size={17} />}
             </button>
 
             <button
@@ -289,8 +289,8 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
             </button>
 
             {isInlineEditing ? (
-              <span className="prompter-landscape-time-badge is-editing" title="Modo de edição direto ativo">
-                ✏️ Editando
+              <span className="prompter-landscape-time-badge is-editing" title="Modo de ajuste de quebras ativo">
+                ✂️ Ajustando Quebras
               </span>
             ) : estimatedSpeechTime ? (
               <span className="prompter-landscape-time-badge" title="Tempo estimado de fala">
