@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, ArrowLeft, BarChart3, ShoppingBag, Settings, AlertCircle, Layers } from 'lucide-react';
+import { RefreshCw, ArrowLeft, BarChart3, ShoppingBag, Settings, AlertCircle, Layers, Users } from 'lucide-react';
 import { fetchAdminMetrics } from '../../services/adminService';
 import { useAdminMaterials } from '../../hooks/useAdminMaterials';
 import { AdminMetricsTab } from './components/AdminMetricsTab';
 import { AdminMaterialsRequestsTab } from './components/AdminMaterialsRequestsTab';
 import { AdminCatalogSettingsTab } from './components/AdminCatalogSettingsTab';
+import { AdminAgendaUsersTab } from './components/AdminAgendaUsersTab';
 import type { CampaignMetrics, ActivityLogItem } from '../../types/analytics';
 import './AdminPage.css';
 
-type AdminTab = 'metrics' | 'materials' | 'catalog';
+type AdminTab = 'metrics' | 'materials' | 'catalog' | 'agenda-users';
 
 interface AdminPageProps {
   onBackToSite: () => void;
@@ -132,6 +133,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToSite }) => {
           <BarChart3 size={18} />
           <span>Métricas de Fotos</span>
         </button>
+
+        <button
+          type="button"
+          className={`admin-nav-tab ${activeTab === 'agenda-users' ? 'active' : ''}`}
+          onClick={() => setActiveTab('agenda-users')}
+        >
+          <Users size={18} />
+          <span>Equipe da Agenda</span>
+        </button>
       </nav>
 
       {activeTab === 'metrics' && <AdminMetricsTab metrics={metrics} logs={logs} />}
@@ -159,6 +169,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToSite }) => {
           onSaveWhatsapp={handleSaveWhatsapp}
         />
       )}
+
+      {activeTab === 'agenda-users' && <AdminAgendaUsersTab />}
     </div>
   );
 };

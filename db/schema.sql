@@ -91,3 +91,38 @@ VALUES
   ('santinhos', 'Santinhos / Panfletos Informativos', 'Material impresso com propostas, histórico e informações do Pastor Ezequias.', 'Divulgação', true, 100, true, 3),
   ('cartaz_perfurado', 'Cartaz / Perfurado para Vidro Traseiro', 'Película perfurada com visão de dentro para fora para vidro traseiro de veículos.', 'Destaque', true, 2, true, 4)
 ON CONFLICT (id) DO NOTHING;
+
+-- 8. Tabela de Usuários da Agenda da Equipe
+CREATE TABLE IF NOT EXISTS campaign_agenda_users (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(150) NOT NULL,
+  username VARCHAR(80) UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role VARCHAR(80) NOT NULL DEFAULT 'Equipe',
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Inserir usuário inicial padrão caso a tabela esteja vazia
+INSERT INTO campaign_agenda_users (name, username, password_hash, role, is_active)
+VALUES ('Pastor Ezequias / Coordenação', 'admin', 'ezequias2026', 'Coordenação', true)
+ON CONFLICT (username) DO NOTHING;
+
+-- 9. Tabela de Eventos e Compromissos da Agenda Diária
+CREATE TABLE IF NOT EXISTS campaign_agenda_events (
+  id SERIAL PRIMARY KEY,
+  event_date VARCHAR(20) NOT NULL,
+  event_time VARCHAR(20) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  location TEXT NOT NULL DEFAULT '',
+  notes TEXT NOT NULL DEFAULT '',
+  status VARCHAR(30) NOT NULL DEFAULT 'pendente',
+  priority VARCHAR(20) NOT NULL DEFAULT 'media',
+  event_type VARCHAR(50) NOT NULL DEFAULT 'compromisso',
+  created_by_name VARCHAR(150) NOT NULL DEFAULT 'Equipe',
+  created_by_user_id INT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+

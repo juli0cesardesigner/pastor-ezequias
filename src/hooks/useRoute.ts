@@ -38,6 +38,9 @@ function getRouteFromLocation(): PageRoute {
   ) {
     return 'ppt';
   }
+  if (path === '/agenda' || path === '/agenda/' || path.startsWith('/agenda') || hash === 'agenda') {
+    return 'agenda';
+  }
   if (path === '/apoio' || path === '/apoio/' || path.startsWith('/apoio') || hash === 'apoio') {
     return 'apoio';
   }

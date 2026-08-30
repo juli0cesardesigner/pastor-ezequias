@@ -7,6 +7,7 @@ import { MaterialRequestPage } from './pages/MaterialRequest/MaterialRequestPage
 import { AdminPage } from './pages/Admin/AdminPage';
 import { VisitasMapPage } from './pages/VisitasMap/VisitasMapPage';
 import { PrompterPage } from './pages/Prompter/PrompterPage';
+import { AgendaPage } from './pages/Agenda/AgendaPage';
 import { useRoute } from './hooks/useRoute';
 import './App.css';
 
@@ -53,6 +54,10 @@ export const App: React.FC = () => {
         <Footer />
       </div>
     );
+  }
+
+  if (currentRoute === 'agenda') {
+    return <AgendaPage />;
   }
 
   return (
