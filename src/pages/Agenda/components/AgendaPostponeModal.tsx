@@ -165,7 +165,7 @@ export const AgendaPostponeModal: React.FC<AgendaPostponeModalProps> = ({
           <div className="agenda-modal-actions">
             <button
               type="button"
-              className="btn-modal-cancel"
+              className="btn-agenda-cancel"
               onClick={onClose}
               disabled={isSubmitting}
             >
@@ -173,7 +173,7 @@ export const AgendaPostponeModal: React.FC<AgendaPostponeModalProps> = ({
             </button>
             <button
               type="submit"
-              className="btn-modal-submit btn-postpone-confirm"
+              className="btn-agenda-save btn-postpone-confirm"
               disabled={isSubmitting}
             >
               <FastForward size={16} />

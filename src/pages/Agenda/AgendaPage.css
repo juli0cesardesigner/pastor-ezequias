@@ -1201,6 +1201,29 @@
   margin: 0;
 }
 
+.btn-agenda-new-event {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--agenda-gold);
+  color: #0b0f19;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(234, 179, 8, 0.35);
+  transition: all 0.2s ease;
+  margin-top: 0.75rem;
+}
+
+.btn-agenda-new-event:hover {
+  background: #facc15;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(234, 179, 8, 0.5);
+}
+
 /* ==============================================================================
    4. Botão Flutuante (FAB) de Novo Compromisso
    ============================================================================== */
@@ -1519,6 +1542,56 @@
 .btn-agenda-cancel:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.btn-agenda-delete-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.55rem 1.25rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+  transition: all 0.15s;
+}
+
+.btn-agenda-delete-confirm:hover {
+  background: #dc2626;
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.5);
+}
+
+.agenda-confirm-container {
+  max-width: 440px !important;
+  height: auto !important;
+  min-height: auto !important;
+  max-height: 90vh !important;
+  border-radius: 14px !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8) !important;
+}
+
+.agenda-confirm-body {
+  padding: 0.75rem 0 1.25rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.agenda-confirm-body p {
+  font-size: 0.95rem;
+  color: #e2e8f0;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.agenda-confirm-warning {
+  font-size: 0.78rem;
+  color: var(--agenda-text-subtle);
 }
 
 /* ==============================================================================

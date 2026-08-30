@@ -35,6 +35,7 @@ import type {
 import { AgendaLogin } from './components/AgendaLogin';
 import { AgendaModal } from './components/AgendaModal';
 import { AgendaPostponeModal } from './components/AgendaPostponeModal';
+import { AgendaConfirmModal } from './components/AgendaConfirmModal';
 import { CustomDropdown } from './components/CustomDropdown';
 import './AgendaPage.css';
 
@@ -165,15 +166,16 @@ export const AgendaPage: React.FC = () => {
     await loadEvents();
   };
 
-  // Excluir compromisso
-  const handleDeleteEvent = async (id: number, title: string) => {
-    if (window.confirm(`Tem certeza que deseja excluir "${title}"?`)) {
-      try {
-        await deleteAgendaEvent(id);
-        setEvents((prev) => prev.filter((e) => e.id !== id));
-      } catch (err) {
-        console.error('Erro ao excluir evento:', err);
-      }
+  // Modal de Exclusão de Compromisso
+  const [deletingEvent, setDeletingEvent] = useState<AgendaEvent | null>(null);
+
+  const handleConfirmDelete = async () => {
+    if (!deletingEvent) return;
+    try {
+      await deleteAgendaEvent(deletingEvent.id);
+      setEvents((prev) => prev.filter((e) => e.id !== deletingEvent.id));
+    } catch (err) {
+      console.error('Erro ao excluir evento:', err);
     }
   };
 
@@ -552,7 +554,7 @@ export const AgendaPage: React.FC = () => {
                               <button
                                 type="button"
                                 className="btn-event-action delete"
-                                onClick={() => handleDeleteEvent(event.id, event.title)}
+                                onClick={() => setDeletingEvent(event)}
                                 title="Excluir data importante"
                                 aria-label="Excluir data importante"
                               >
@@ -615,7 +617,7 @@ export const AgendaPage: React.FC = () => {
                             <button
                               type="button"
                               className="btn-event-action delete"
-                              onClick={() => handleDeleteEvent(event.id, event.title)}
+                              onClick={() => setDeletingEvent(event)}
                               title="Excluir compromisso"
                               aria-label="Excluir compromisso"
                             >
@@ -645,6 +647,14 @@ export const AgendaPage: React.FC = () => {
         currentUser={sessionUser}
         defaultDate={selectedDate}
         defaultEventType={modalDefaultEventType}
+      />
+
+      {/* Modal de Confirmação de Exclusão */}
+      <AgendaConfirmModal
+        isOpen={!!deletingEvent}
+        onClose={() => setDeletingEvent(null)}
+        onConfirm={handleConfirmDelete}
+        event={deletingEvent}
       />
 
       {/* Modal de Adiar Compromisso */}
