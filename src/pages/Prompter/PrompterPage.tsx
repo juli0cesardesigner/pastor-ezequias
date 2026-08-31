@@ -15,8 +15,6 @@ import {
   Edit,
   Tag,
   AlertCircle,
-  CornerDownLeft,
-  Delete,
   X,
 } from 'lucide-react';
 import { usePrompterStorage } from './hooks/usePrompterStorage';
@@ -77,18 +75,13 @@ export const PrompterPage: React.FC = () => {
   const [cloudCategory, setCloudCategory] = useState<string>('Mensagem Pastoral');
   const [isSavingCloud, setIsSavingCloud] = useState<boolean>(false);
 
-  // Modo de Ajuste Fino de Quebras e Frases (sem teclado na tela)
-  const [isBreakAdjustMode, setIsBreakAdjustMode] = useState<boolean>(false);
-  const [activeBreakPoint, setActiveBreakPoint] = useState<{
-    charIndex: number;
-    x: number;
-    y: number;
-    word: string;
-  } | null>(null);
-
   // Busca e filtros na Nuvem
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
+
+  // Estado para Edição Direta no Modo Leitura
+  const [isInlineEditing, setIsInlineEditing] = useState<boolean>(false);
+  const inlineTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -217,12 +210,6 @@ export const PrompterPage: React.FC = () => {
 
   // Alternar Play/Pause
   const togglePlay = useCallback(() => {
-    if (activeBreakPoint) {
-      setActiveBreakPoint(null);
-    }
-    if (isBreakAdjustMode) {
-      setIsBreakAdjustMode(false);
-    }
     setIsPlaying((prev) => {
       const next = !prev;
       if (next) {
@@ -241,7 +228,7 @@ export const PrompterPage: React.FC = () => {
       }
       return next;
     });
-  }, [activeBreakPoint, isBreakAdjustMode]);
+  }, []);
 
   // Reiniciar rolagem ao topo
   const handleRestart = useCallback(() => {
@@ -256,68 +243,35 @@ export const PrompterPage: React.FC = () => {
   const handleBackToEdit = useCallback(() => {
     setIsPlaying(false);
     setShowCountdown(false);
+    setIsInlineEditing(false);
     setMode('editor');
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
     }
   }, []);
 
-  // Alternar modo de ajuste de quebras e frases (↵ / ⌫)
-  const handleToggleBreakAdjust = useCallback(() => {
-    setIsBreakAdjustMode((prev) => {
+  // Alternar modo de edição direta na tela
+  const handleToggleInlineEdit = useCallback(() => {
+    setIsInlineEditing((prev) => {
       const next = !prev;
       if (next) {
         setIsPlaying(false);
-        setCopiedNotification('Toque em uma palavra para ajustar a quebra (↵ ou ⌫)');
-        setTimeout(() => setCopiedNotification(null), 3000);
       } else {
-        setActiveBreakPoint(null);
+        setCopiedNotification('Texto salvo!');
+        setTimeout(() => setCopiedNotification(null), 2000);
       }
       return next;
     });
   }, []);
 
-  // Inserir salto de linha (↵) no ponto clicado
-  const handleInsertLineBreak = useCallback((charIndex: number) => {
-    if (charIndex < 0 || charIndex > text.length) return;
-    let newText = '';
-    if (text[charIndex] === ' ') {
-      newText = text.slice(0, charIndex) + '\n' + text.slice(charIndex + 1);
-    } else if (charIndex > 0 && text[charIndex - 1] === ' ') {
-      newText = text.slice(0, charIndex - 1) + '\n' + text.slice(charIndex);
-    } else {
-      newText = text.slice(0, charIndex) + '\n' + text.slice(charIndex);
+  // Ajustar altura da textarea quando entrar em modo de edição direta na tela
+  useEffect(() => {
+    if (isInlineEditing && inlineTextareaRef.current) {
+      const el = inlineTextareaRef.current;
+      el.style.height = `${Math.max(window.innerHeight * 0.8, el.scrollHeight + 150)}px`;
+      el.focus();
     }
-    setText(newText);
-    setCopiedNotification('Linha saltada (↵)!');
-    setTimeout(() => setCopiedNotification(null), 1500);
-    setActiveBreakPoint(null);
-  }, [text, setText]);
-
-  // Deletar espaço ou juntar linha (⌫) no ponto clicado
-  const handleDeleteSpaceOrBreak = useCallback((charIndex: number) => {
-    if (charIndex <= 0 || charIndex > text.length) return;
-    let newlineIdx = -1;
-    for (let offset of [0, -1, 1, -2, 2, -3, 3]) {
-      const idx = charIndex + offset;
-      if (idx >= 0 && idx < text.length && text[idx] === '\n') {
-        newlineIdx = idx;
-        break;
-      }
-    }
-
-    let newText = '';
-    if (newlineIdx !== -1) {
-      newText = text.slice(0, newlineIdx) + ' ' + text.slice(newlineIdx + 1);
-    } else {
-      newText = text.slice(0, Math.max(0, charIndex - 1)) + text.slice(charIndex);
-    }
-    newText = newText.replace(/ {2,}/g, ' ');
-    setText(newText);
-    setCopiedNotification('Espaço / Quebra removida (⌫)!');
-    setTimeout(() => setCopiedNotification(null), 1500);
-    setActiveBreakPoint(null);
-  }, [text, setText]);
+  }, [isInlineEditing]);
 
   // Motor de rolagem contínua a 60fps usando requestAnimationFrame
   useEffect(() => {
@@ -450,13 +404,21 @@ export const PrompterPage: React.FC = () => {
         return;
       }
 
+      // Se estiver no Modo Leitura e em edição inline ativa
+      if (mode === 'reading' && isInlineEditing) {
+        if (e.key === 'Escape' || ((e.ctrlKey || e.metaKey) && e.key === 'Enter')) {
+          e.preventDefault();
+          setIsInlineEditing(false);
+          setCopiedNotification('Texto salvo!');
+          setTimeout(() => setCopiedNotification(null), 2000);
+        }
+        return;
+      }
+
       // Atalhos no Modo Leitura
       if (e.code === 'Space') {
         e.preventDefault();
         togglePlay();
-      } else if (e.key === 'e' || e.key === 'E') {
-        e.preventDefault();
-        handleToggleBreakAdjust();
       } else if (e.code === 'ArrowUp') {
         e.preventDefault();
         updateSetting('speed', Math.min(100, settings.speed + 2));
@@ -479,6 +441,9 @@ export const PrompterPage: React.FC = () => {
           scrollerRef.current.scrollTop = currentScrollRef.current;
         }
         triggerControlsVisibility();
+      } else if (e.key === 'e' || e.key === 'E') {
+        e.preventDefault();
+        handleToggleInlineEdit();
       } else if (e.key === 'r' || e.key === 'R') {
         e.preventDefault();
         handleRestart();
@@ -491,13 +456,7 @@ export const PrompterPage: React.FC = () => {
         toggleFullscreen();
       } else if (e.code === 'Escape') {
         e.preventDefault();
-        if (activeBreakPoint) {
-          setActiveBreakPoint(null);
-        } else if (isBreakAdjustMode) {
-          setIsBreakAdjustMode(false);
-        } else {
-          handleBackToEdit();
-        }
+        handleBackToEdit();
       }
     };
 
@@ -505,12 +464,11 @@ export const PrompterPage: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
     mode,
-    isBreakAdjustMode,
-    activeBreakPoint,
+    isInlineEditing,
     settings.speed,
     settings.forceLandscape,
     handleStartReading,
-    handleToggleBreakAdjust,
+    handleToggleInlineEdit,
     togglePlay,
     updateSetting,
     triggerControlsVisibility,
@@ -556,18 +514,14 @@ export const PrompterPage: React.FC = () => {
     };
   }, [mode, settings.forceLandscape]);
 
-  // Iniciar toque na tela de leitura (apenas se não estiver arrastando/scrollando)
+  // Iniciar toque na tela de leitura (apenas se não estiver arrastando/scrollando ou editando)
   const handleScreenClick = useCallback(() => {
     if (mode !== 'reading') return;
     if (showCountdown) return;
-    if (activeBreakPoint) {
-      setActiveBreakPoint(null);
-      return;
-    }
-    if (isBreakAdjustMode) return;
+    if (isInlineEditing) return;
     if (touchStateRef.current?.isDragging) return;
     togglePlay();
-  }, [mode, showCountdown, activeBreakPoint, isBreakAdjustMode, togglePlay]);
+  }, [mode, showCountdown, isInlineEditing, togglePlay]);
 
   // Abrir modal de salvar na nuvem
   const handleOpenSaveCloudModal = (existing?: CloudScript | null) => {
@@ -1148,7 +1102,7 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
       {/* ======================================================== */}
       {mode === 'reading' && (
         <div
-          className={`prompter-reading-screen ${settings.mirrorHorizontal ? 'is-mirrored' : ''} ${settings.forceLandscape ? 'force-landscape' : ''} ${isBreakAdjustMode ? 'is-break-adjust-active' : ''}`}
+          className={`prompter-reading-screen ${settings.mirrorHorizontal ? 'is-mirrored' : ''} ${settings.forceLandscape ? 'force-landscape' : ''}`}
           onClick={handleScreenClick}
           onMouseMove={triggerControlsVisibility}
           onTouchStart={handleTouchStart}
@@ -1190,94 +1144,43 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
               {/* Espaçamento superior para o texto iniciar na altura da linha guia */}
               <div className="prompter-spacer-top" />
 
-              {/* Corpo do Texto com Suporte a Ajuste Fino de Quebras de Linha e Espaços (Sem teclado na tela) */}
-              <div
-                className={`prompter-text-body ${isBreakAdjustMode ? 'is-break-adjust-mode' : ''}`}
-                style={{
-                  fontSize: `${settings.fontSize}px`,
-                  textAlign: settings.textAlign,
-                }}
-              >
-                {text.split('\n').map((line, lineIdx, lineArr) => {
-                  let lineStart = 0;
-                  for (let i = 0; i < lineIdx; i++) {
-                    lineStart += lineArr[i].length + 1;
-                  }
-                  const words = line.split(' ');
-
-                  return (
+              {/* Corpo do Texto / Editor Inline */}
+              {isInlineEditing ? (
+                <textarea
+                  ref={inlineTextareaRef}
+                  className="prompter-inline-screen-textarea"
+                  value={text}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setText(val);
+                    if (e.target.scrollHeight > e.target.clientHeight) {
+                      e.target.style.height = `${e.target.scrollHeight + 100}px`;
+                    }
+                  }}
+                  placeholder="Digite ou edite o roteiro diretamente na tela..."
+                  style={{
+                    fontSize: `${settings.fontSize}px`,
+                    textAlign: settings.textAlign,
+                  }}
+                  autoFocus
+                />
+              ) : (
+                <div
+                  className="prompter-text-body"
+                  style={{
+                    fontSize: `${settings.fontSize}px`,
+                    textAlign: settings.textAlign,
+                  }}
+                  onDoubleClick={handleToggleInlineEdit}
+                  title="Dê duplo clique para editar este texto diretamente (ou pressione E)"
+                >
+                  {text.split('\n').map((line, lineIdx) => (
                     <div key={lineIdx} className="prompter-text-line">
-                      {words.map((word, wordIdx) => {
-                        let wordStart = lineStart;
-                        for (let w = 0; w < wordIdx; w++) {
-                          wordStart += words[w].length + 1;
-                        }
-                        const wordEnd = wordStart + word.length;
-
-                        return (
-                          <React.Fragment key={wordIdx}>
-                            <span
-                              className={`prompter-word-unit ${isBreakAdjustMode ? 'is-interactive' : ''}`}
-                              onClick={(e) => {
-                                if (isBreakAdjustMode) {
-                                  e.stopPropagation();
-                                  const rect = e.currentTarget.getBoundingClientRect();
-                                  setActiveBreakPoint({
-                                    charIndex: wordEnd,
-                                    x: rect.right,
-                                    y: rect.top,
-                                    word: word,
-                                  });
-                                }
-                              }}
-                            >
-                              {word}
-                            </span>
-                            {wordIdx < words.length - 1 && (
-                              <span
-                                className={`prompter-space-unit ${isBreakAdjustMode ? 'is-interactive' : ''}`}
-                                onClick={(e) => {
-                                  if (isBreakAdjustMode) {
-                                    e.stopPropagation();
-                                    const rect = e.currentTarget.getBoundingClientRect();
-                                    setActiveBreakPoint({
-                                      charIndex: wordEnd,
-                                      x: rect.left,
-                                      y: rect.top,
-                                      word: word,
-                                    });
-                                  }
-                                }}
-                              >
-                                {' '}
-                              </span>
-                            )}
-                          </React.Fragment>
-                        );
-                      })}
-                      {/* Marcador visual de quebra de linha quando em modo ajuste */}
-                      {lineIdx < lineArr.length - 1 && isBreakAdjustMode && (
-                        <span
-                          className="prompter-newline-unit"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            setActiveBreakPoint({
-                              charIndex: lineStart + line.length,
-                              x: rect.left,
-                              y: rect.top,
-                              word: '↵',
-                            });
-                          }}
-                          title="Quebra de Linha (Toque para juntar)"
-                        >
-                          ↵
-                        </span>
-                      )}
+                      {line || '\u00A0'}
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+              )}
 
               {/* Espaçamento inferior para o texto poder rolar até a última linha */}
               <div className="prompter-spacer-bottom">
@@ -1288,46 +1191,6 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
             </div>
           </div>
 
-          {/* Mini-Menu Flutuante com EXATAMENTE 2 Ícones: Saltar Linha (↵) e Deletar/Juntar (⌫) */}
-          {isBreakAdjustMode && activeBreakPoint && (
-            <div
-              className="prompter-break-quick-menu"
-              style={{
-                position: 'fixed',
-                top: `${Math.max(16, Math.min(window.innerHeight - 80, activeBreakPoint.y - 58))}px`,
-                left: `${Math.max(12, Math.min(window.innerWidth - 250, activeBreakPoint.x - 110))}px`,
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                type="button"
-                className="break-quick-btn break-action-insert"
-                onClick={() => handleInsertLineBreak(activeBreakPoint.charIndex)}
-                title="Saltar Linha (↵) - Quebra a frase neste ponto para nova linha"
-              >
-                <CornerDownLeft size={16} />
-                <span>Saltar Linha</span>
-              </button>
-              <button
-                type="button"
-                className="break-quick-btn break-action-delete"
-                onClick={() => handleDeleteSpaceOrBreak(activeBreakPoint.charIndex)}
-                title="Deletar Espaço / Juntar Linha (⌫)"
-              >
-                <Delete size={16} />
-                <span>Juntar / ⌫</span>
-              </button>
-              <button
-                type="button"
-                className="break-quick-close"
-                onClick={() => setActiveBreakPoint(null)}
-                title="Fechar"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          )}
-
           {/* HUD de Controles Flutuantes */}
           {!showCountdown && (
             <PrompterControls
@@ -1335,8 +1198,8 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
               onTogglePlay={togglePlay}
               onRestart={handleRestart}
               onBackToEdit={handleBackToEdit}
-              isInlineEditing={isBreakAdjustMode}
-              onToggleInlineEdit={handleToggleBreakAdjust}
+              isInlineEditing={isInlineEditing}
+              onToggleInlineEdit={handleToggleInlineEdit}
               settings={settings}
               onUpdateSetting={updateSetting}
               isWakeLocked={isWakeLocked}

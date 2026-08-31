@@ -10,11 +10,11 @@ import {
   Minus,
   X,
   Type,
-  Check,
   RotateCw,
   Smartphone,
   Contrast,
-  CornerDownLeft,
+  Edit3,
+  Check,
 } from 'lucide-react';
 import type { PrompterSettings } from '../hooks/usePrompterStorage';
 
@@ -23,8 +23,8 @@ interface PrompterControlsProps {
   onTogglePlay: () => void;
   onRestart: () => void;
   onBackToEdit: () => void;
-  isInlineEditing: boolean;
-  onToggleInlineEdit: () => void;
+  isInlineEditing?: boolean;
+  onToggleInlineEdit?: () => void;
   settings: PrompterSettings;
   onUpdateSetting: <K extends keyof PrompterSettings>(key: K, value: PrompterSettings[K]) => void;
   isWakeLocked: boolean;
@@ -116,8 +116,8 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
 
             <div className="prompter-hud-center-info">
               {isInlineEditing ? (
-                <span className="prompter-badge-time is-editing" title="Modo de ajuste de quebras e ritmo">
-                  ✂️ Ajuste de Frases (Toque no texto)
+                <span className="prompter-badge-time is-editing" title="Modo de edição direta ativo">
+                  ✏️ Editando na Tela
                 </span>
               ) : estimatedSpeechTime ? (
                 <span className="prompter-badge-time" title="Tempo estimado de fala">
@@ -127,6 +127,17 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
             </div>
 
             <div className="prompter-hud-actions-right">
+              {onToggleInlineEdit && (
+                <button
+                  type="button"
+                  className={`prompter-hud-btn icon-btn ${isInlineEditing ? 'active-edit-btn' : ''}`}
+                  onClick={onToggleInlineEdit}
+                  title={isInlineEditing ? 'Concluir edição na tela (Esc)' : 'Editar texto diretamente na tela (E)'}
+                >
+                  {isInlineEditing ? <Check size={18} className="text-amber" /> : <Edit3 size={17} />}
+                </button>
+              )}
+
               <button
                 type="button"
                 className={`prompter-hud-btn icon-btn ${settings.forceLandscape ? 'active' : ''}`}
@@ -138,15 +149,6 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
                 }
               >
                 <RotateCw size={17} className={settings.forceLandscape ? 'rotate-icon-active' : ''} />
-              </button>
-
-              <button
-                type="button"
-                className={`prompter-hud-btn icon-btn ${isInlineEditing ? 'active-edit-btn' : ''}`}
-                onClick={onToggleInlineEdit}
-                title={isInlineEditing ? 'Concluir ajuste de quebras' : 'Ajustar quebras de frases e saltos de linha (↵ / ⌫)'}
-              >
-                {isInlineEditing ? <Check size={18} className="text-amber" /> : <CornerDownLeft size={17} />}
               </button>
 
               <button
@@ -237,7 +239,7 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
         {/* 2. MODO PAISAGEM (LANDSCAPE): DOCK ÚNICO NO RODAPÉ       */}
         {/* ======================================================== */}
         <div className="prompter-hud-landscape-dock">
-          {/* Lado Esquerdo: 5 Botões Redondos + Badge de Tempo */}
+          {/* Lado Esquerdo: Botões Redondos + Badge de Tempo */}
           <div className="hud-landscape-left">
             <button
               type="button"
@@ -247,6 +249,17 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
             >
               <Home size={18} />
             </button>
+
+            {onToggleInlineEdit && (
+              <button
+                type="button"
+                className={`prompter-hud-circle-btn ${isInlineEditing ? 'active-edit-btn' : ''}`}
+                onClick={onToggleInlineEdit}
+                title={isInlineEditing ? 'Concluir edição na tela (Esc)' : 'Editar texto diretamente na tela (E)'}
+              >
+                {isInlineEditing ? <Check size={18} className="text-amber" /> : <Edit3 size={18} />}
+              </button>
+            )}
 
             <button
               type="button"
@@ -259,15 +272,6 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
               }
             >
               <RotateCw size={18} className={settings.forceLandscape ? 'rotate-icon-active' : ''} />
-            </button>
-
-            <button
-              type="button"
-              className={`prompter-hud-circle-btn ${isInlineEditing ? 'active-edit-btn' : ''}`}
-              onClick={onToggleInlineEdit}
-              title={isInlineEditing ? 'Concluir ajuste de quebras' : 'Ajustar quebras de frases e saltos de linha (↵ / ⌫)'}
-            >
-              {isInlineEditing ? <Check size={18} className="text-amber" /> : <CornerDownLeft size={17} />}
             </button>
 
             <button
@@ -289,8 +293,8 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
             </button>
 
             {isInlineEditing ? (
-              <span className="prompter-landscape-time-badge is-editing" title="Modo de ajuste de quebras ativo">
-                ✂️ Ajustando Quebras
+              <span className="prompter-landscape-time-badge is-editing" title="Modo de edição direta ativo">
+                ✏️ Editando
               </span>
             ) : estimatedSpeechTime ? (
               <span className="prompter-landscape-time-badge" title="Tempo estimado de fala">
