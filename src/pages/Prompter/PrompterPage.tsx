@@ -15,7 +15,6 @@ import {
   Edit,
   Tag,
   AlertCircle,
-  X,
 } from 'lucide-react';
 import { usePrompterStorage } from './hooks/usePrompterStorage';
 import { useWakeLock } from './hooks/useWakeLock';
