@@ -15,6 +15,7 @@ import {
   Contrast,
   Edit3,
   Check,
+  Wifi,
 } from 'lucide-react';
 import type { PrompterSettings } from '../hooks/usePrompterStorage';
 
@@ -32,6 +33,8 @@ interface PrompterControlsProps {
   onToggleFullscreen: () => void;
   visible: boolean;
   estimatedSpeechTime?: string;
+  onOpenP2PModal?: () => void;
+  isP2PConnected?: boolean;
 }
 
 export const PrompterControls: React.FC<PrompterControlsProps> = ({
@@ -46,6 +49,8 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
   onToggleFullscreen,
   visible,
   estimatedSpeechTime,
+  onOpenP2PModal,
+  isP2PConnected,
 }) => {
   const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
 
@@ -159,6 +164,17 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
               >
                 <Sliders size={18} />
               </button>
+
+              {onOpenP2PModal && (
+                <button
+                  type="button"
+                  className={`prompter-hud-btn icon-btn ${isP2PConnected ? 'active' : ''}`}
+                  onClick={onOpenP2PModal}
+                  title={isP2PConnected ? 'Operador Conectado (P2P)' : 'Parear com Notebook Operador'}
+                >
+                  <Wifi size={17} className={isP2PConnected ? 'text-emerald-400' : ''} />
+                </button>
+              )}
 
               <button
                 type="button"
@@ -282,6 +298,17 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
             >
               <Sliders size={18} />
             </button>
+
+            {onOpenP2PModal && (
+              <button
+                type="button"
+                className={`prompter-hud-circle-btn ${isP2PConnected ? 'active' : ''}`}
+                onClick={onOpenP2PModal}
+                title={isP2PConnected ? 'Operador Conectado (P2P)' : 'Parear com Notebook Operador'}
+              >
+                <Wifi size={18} className={isP2PConnected ? 'text-emerald-400' : ''} />
+              </button>
+            )}
 
             <button
               type="button"

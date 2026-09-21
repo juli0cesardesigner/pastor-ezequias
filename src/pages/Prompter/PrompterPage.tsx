@@ -15,6 +15,9 @@ import {
   Edit,
   Tag,
   AlertCircle,
+  Wifi,
+  Laptop,
+  Bell,
 } from 'lucide-react';
 import { usePrompterStorage } from './hooks/usePrompterStorage';
 import { useWakeLock } from './hooks/useWakeLock';
@@ -26,6 +29,9 @@ import {
 } from '../../services/prompterService';
 import { PrompterControls } from './components/PrompterControls';
 import { PrompterCountdown } from './components/PrompterCountdown';
+import { PrompterP2PModal } from './components/PrompterP2PModal';
+import { PrompterOperatorDeck } from './components/PrompterOperatorDeck';
+import { p2pManager, type P2PMessage } from '../../services/prompterP2PService';
 import './PrompterPage.css';
 
 const SCRIPT_CATEGORIES = [
@@ -96,6 +102,38 @@ export const PrompterPage: React.FC = () => {
 
   // Ativar Wake Lock durante modo leitura
   const { isLocked: isWakeLocked } = useWakeLock(mode === 'reading');
+
+  // Detecção de parâmetros de URL para Modo Operador Remoto
+  const [isOperatorMode, setIsOperatorMode] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    return (
+      params.get('role') === 'operator' ||
+      params.get('operator') === 'true' ||
+      !!params.get('room')
+    );
+  });
+
+  const [operatorRoomCode] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    const params = new URLSearchParams(window.location.search);
+    return params.get('room') || '';
+  });
+
+  // Estados P2P (Display / Host)
+  const [showP2PModal, setShowP2PModal] = useState<boolean>(false);
+  const [p2pRoomCode, setP2pRoomCode] = useState<string | null>(null);
+  const [isP2PConnected, setIsP2PConnected] = useState<boolean>(false);
+  const [p2pStatusMessage, setP2pStatusMessage] = useState<string>('');
+  const [flashAlertMessage, setFlashAlertMessage] = useState<string | null>(null);
+  const flashTimeoutRef = useRef<number | null>(null);
+
+  // Iniciar como Host quando o modal for aberto
+  const handleStartHosting = useCallback(async (): Promise<string> => {
+    const code = await p2pManager.startHost(p2pRoomCode || undefined);
+    setP2pRoomCode(code);
+    return code;
+  }, [p2pRoomCode]);
 
   // Carregar roteiros da nuvem ao iniciar
   const loadCloudScripts = useCallback(async () => {
@@ -324,6 +362,93 @@ export const PrompterPage: React.FC = () => {
       currentScrollRef.current = scrollerRef.current.scrollTop;
     }
   };
+
+  // Ouvir mensagens P2P do Operador no Host (Display do Celular)
+  useEffect(() => {
+    const unsubStatus = p2pManager.onStatusChange((status, msg) => {
+      setIsP2PConnected(status === 'connected');
+      if (msg) setP2pStatusMessage(msg);
+    });
+
+    const unsubMsg = p2pManager.onMessage((msg: P2PMessage) => {
+      switch (msg.type) {
+        case 'SYNC_TEXT': {
+          if (typeof msg.payload?.text === 'string') {
+            setText(msg.payload.text);
+          }
+          break;
+        }
+        case 'CONTROL_ACTION': {
+          const action = msg.payload?.action;
+          if (action === 'play') {
+            setMode('reading');
+            setIsPlaying(true);
+            setShowControls(false);
+          } else if (action === 'pause') {
+            setIsPlaying(false);
+            setShowControls(true);
+          } else if (action === 'restart') {
+            currentScrollRef.current = 0;
+            if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
+            triggerControlsVisibility();
+          } else if (action === 'countdown') {
+            setMode('reading');
+            setShowCountdown(true);
+            setShowControls(false);
+            currentScrollRef.current = 0;
+            if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
+          }
+          break;
+        }
+        case 'SPEED_CHANGE': {
+          if (typeof msg.payload?.speed === 'number') {
+            updateSetting('speed', msg.payload.speed);
+          }
+          break;
+        }
+        case 'FONT_SIZE_CHANGE': {
+          if (typeof msg.payload?.fontSize === 'number') {
+            updateSetting('fontSize', msg.payload.fontSize);
+          }
+          break;
+        }
+        case 'LOAD_SCRIPT': {
+          if (typeof msg.payload?.content === 'string') {
+            setText(msg.payload.content);
+            setCopiedNotification(`Roteiro "${msg.payload.title}" carregado pelo operador!`);
+            setTimeout(() => setCopiedNotification(null), 3000);
+          }
+          break;
+        }
+        case 'FLASH_ALERT': {
+          if (typeof msg.payload?.message === 'string') {
+            setFlashAlertMessage(msg.payload.message);
+            if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+            flashTimeoutRef.current = window.setTimeout(() => {
+              setFlashAlertMessage(null);
+            }, 6000);
+          }
+          break;
+        }
+        case 'STATE_REQUEST': {
+          p2pManager.sendStateResponse({
+            text,
+            isPlaying,
+            speed: settings.speed,
+            fontSize: settings.fontSize,
+            textColor: settings.textColor,
+          });
+          break;
+        }
+      }
+    });
+
+    return () => {
+      unsubStatus();
+      unsubMsg();
+      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+    };
+  }, [text, isPlaying, settings.speed, settings.fontSize, settings.textColor, updateSetting, triggerControlsVisibility, setText]);
 
   // Gestos de Touch para percorrer o script (para cima / para baixo) em qualquer orientação
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -622,6 +747,22 @@ export const PrompterPage: React.FC = () => {
   }, [cloudScripts, selectedCategory, searchQuery]);
 
 
+  if (isOperatorMode) {
+    return (
+      <PrompterOperatorDeck
+        initialRoomCode={operatorRoomCode}
+        onExitOperatorMode={() => {
+          setIsOperatorMode(false);
+          const url = new URL(window.location.href);
+          url.searchParams.delete('role');
+          url.searchParams.delete('operator');
+          url.searchParams.delete('room');
+          window.history.replaceState({}, '', url.toString());
+        }}
+      />
+    );
+  }
+
   return (
     <div className={`prompter-app-wrapper theme-oled ${settings.textColor}-color ${settings.forceLandscape ? 'is-forced-landscape' : ''}`}>
       {/* ======================================================== */}
@@ -644,6 +785,16 @@ export const PrompterPage: React.FC = () => {
                   <Cloud size={13} className="text-amber" />
                   <span>Nuvem ({cloudScripts.length})</span>
                 </button>
+                <span className="dot-divider">•</span>
+                <button
+                  type="button"
+                  className={`p2p-header-pill ${isP2PConnected ? 'is-connected' : ''}`}
+                  onClick={() => setShowP2PModal(true)}
+                  title="Parear com notebook para edição simultânea e controle remoto"
+                >
+                  <Wifi size={13} className={isP2PConnected ? 'text-emerald-400' : 'text-amber'} />
+                  <span>{isP2PConnected ? 'Operador Ativo' : 'Parear Operador'}</span>
+                </button>
               </div>
               <h1 className="prompter-title">
                 {activeCloudScript ? activeCloudScript.title : 'Roteiro de Leitura'}
@@ -651,6 +802,16 @@ export const PrompterPage: React.FC = () => {
             </div>
 
             <div className="prompter-header-stats">
+              <button
+                type="button"
+                className="operator-mode-toggle-btn"
+                onClick={() => setIsOperatorMode(true)}
+                title="Abrir Deck de Operador no Notebook"
+              >
+                <Laptop size={14} />
+                <span>Modo Operador</span>
+              </button>
+
               <div className="stat-pill" title="Contagem de palavras">
                 <FileText size={15} />
                 <span><strong>{stats.words}</strong> pal.</span>
@@ -685,6 +846,15 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
                   >
                     <Cloud size={14} />
                     <span>Roteiros na Nuvem ({cloudScripts.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`action-pill-btn p2p-action-btn ${isP2PConnected ? 'is-connected' : ''}`}
+                    onClick={() => setShowP2PModal(true)}
+                  >
+                    <Wifi size={14} className={isP2PConnected ? 'text-emerald-400' : ''} />
+                    <span>{isP2PConnected ? 'Operador Conectado' : 'Parear Operador'}</span>
                   </button>
 
                   {text.trim().length > 0 && (
@@ -1109,6 +1279,14 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
           onTouchEnd={handleTouchEnd}
           onWheel={handleWheel}
         >
+          {/* Alerta Relâmpago do Operador */}
+          {flashAlertMessage && (
+            <div className="prompter-flash-floating-banner">
+              <Bell size={22} className="shrink-0 animate-bounce text-amber-400" />
+              <span>{flashAlertMessage}</span>
+            </div>
+          )}
+
           {/* Contagem regressiva */}
           {showCountdown && (
             <PrompterCountdown
@@ -1206,10 +1384,22 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
               onToggleFullscreen={toggleFullscreen}
               visible={showControls}
               estimatedSpeechTime={estimatedSpeechTime}
+              onOpenP2PModal={() => setShowP2PModal(true)}
+              isP2PConnected={isP2PConnected}
             />
           )}
         </div>
       )}
+
+      {/* MODAL DE PAREAMENTO P2P */}
+      <PrompterP2PModal
+        isOpen={showP2PModal}
+        onClose={() => setShowP2PModal(false)}
+        currentRoomCode={p2pRoomCode}
+        onStartHosting={handleStartHosting}
+        isConnected={isP2PConnected}
+        statusMessage={p2pStatusMessage}
+      />
     </div>
   );
 };
