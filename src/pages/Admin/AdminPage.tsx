@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, ArrowLeft, BarChart3, ShoppingBag, Settings, AlertCircle, Layers, Users } from 'lucide-react';
+import { RefreshCw, ArrowLeft, BarChart3, ShoppingBag, Settings, AlertCircle, Layers, Users, Film } from 'lucide-react';
 import { fetchAdminMetrics } from '../../services/adminService';
 import { useAdminMaterials } from '../../hooks/useAdminMaterials';
 import { AdminMetricsTab } from './components/AdminMetricsTab';
 import { AdminMaterialsRequestsTab } from './components/AdminMaterialsRequestsTab';
 import { AdminCatalogSettingsTab } from './components/AdminCatalogSettingsTab';
 import { AdminAgendaUsersTab } from './components/AdminAgendaUsersTab';
+import { AdminVideosTab } from './components/AdminVideosTab';
 import type { CampaignMetrics, ActivityLogItem } from '../../types/analytics';
 import './AdminPage.css';
 
-type AdminTab = 'metrics' | 'materials' | 'catalog' | 'agenda-users';
+type AdminTab = 'materials' | 'videos' | 'catalog' | 'metrics' | 'agenda-users';
 
 interface AdminPageProps {
   onBackToSite: () => void;
@@ -118,6 +119,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToSite }) => {
 
         <button
           type="button"
+          className={`admin-nav-tab ${activeTab === 'videos' ? 'active' : ''}`}
+          onClick={() => setActiveTab('videos')}
+        >
+          <Film size={18} />
+          <span>Vídeos & Mídias</span>
+        </button>
+
+        <button
+          type="button"
           className={`admin-nav-tab ${activeTab === 'catalog' ? 'active' : ''}`}
           onClick={() => setActiveTab('catalog')}
         >
@@ -157,6 +167,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToSite }) => {
           onExportCSV={exportToCSV}
         />
       )}
+
+      {activeTab === 'videos' && <AdminVideosTab />}
 
       {activeTab === 'catalog' && (
         <AdminCatalogSettingsTab

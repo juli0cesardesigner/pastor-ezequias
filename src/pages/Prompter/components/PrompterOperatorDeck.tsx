@@ -16,6 +16,8 @@ import {
   ShieldCheck,
   Timer,
   Type,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import {
   p2pManager,
@@ -411,6 +413,26 @@ export const PrompterOperatorDeck: React.FC<PrompterOperatorDeckProps> = ({
                   <Timer size={18} />
                   <span>Contagem (3s)</span>
                 </button>
+
+                <button
+                  type="button"
+                  className="operator-action-subbtn"
+                  onClick={() => p2pManager.sendControlAction('step_prev')}
+                  title="Recuar 1 linha na roleta do celular"
+                >
+                  <ChevronUp size={18} />
+                  <span>Linha Anterior</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="operator-action-subbtn"
+                  onClick={() => p2pManager.sendControlAction('step_next')}
+                  title="Avançar 1 linha na roleta do celular"
+                >
+                  <ChevronDown size={18} />
+                  <span>Próxima Linha</span>
+                </button>
               </div>
             </div>
           </div>
@@ -429,15 +451,16 @@ export const PrompterOperatorDeck: React.FC<PrompterOperatorDeckProps> = ({
               <button
                 type="button"
                 className="operator-speed-step-btn"
-                onClick={() => handleSpeedChange(speed - 5)}
-                title="Diminuir velocidade (-5)"
+                onClick={() => handleSpeedChange(speed - 1)}
+                title="Diminuir velocidade (-1)"
               >
-                -5
+                -1
               </button>
               <input
                 type="range"
                 min={1}
                 max={100}
+                step={1}
                 value={speed}
                 onChange={(e) => handleSpeedChange(Number(e.target.value))}
                 className="operator-speed-slider"
@@ -445,10 +468,10 @@ export const PrompterOperatorDeck: React.FC<PrompterOperatorDeckProps> = ({
               <button
                 type="button"
                 className="operator-speed-step-btn"
-                onClick={() => handleSpeedChange(speed + 5)}
-                title="Aumentar velocidade (+5)"
+                onClick={() => handleSpeedChange(speed + 1)}
+                title="Aumentar velocidade (+1)"
               >
-                +5
+                +1
               </button>
             </div>
             <div className="operator-speed-presets">
@@ -471,15 +494,16 @@ export const PrompterOperatorDeck: React.FC<PrompterOperatorDeckProps> = ({
               <button
                 type="button"
                 className="operator-speed-step-btn"
-                onClick={() => handleFontSizeChange(fontSize - 4)}
-                title="Diminuir fonte (-4px)"
+                onClick={() => handleFontSizeChange(fontSize - 1)}
+                title="Diminuir fonte (-1px)"
               >
-                -4
+                -1
               </button>
               <input
                 type="range"
                 min={20}
                 max={110}
+                step={1}
                 value={fontSize}
                 onChange={(e) => handleFontSizeChange(Number(e.target.value))}
                 className="operator-speed-slider"
@@ -487,10 +511,10 @@ export const PrompterOperatorDeck: React.FC<PrompterOperatorDeckProps> = ({
               <button
                 type="button"
                 className="operator-speed-step-btn"
-                onClick={() => handleFontSizeChange(fontSize + 4)}
-                title="Aumentar fonte (+4px)"
+                onClick={() => handleFontSizeChange(fontSize + 1)}
+                title="Aumentar fonte (+1px)"
               >
-                +4
+                +1
               </button>
             </div>
           </div>

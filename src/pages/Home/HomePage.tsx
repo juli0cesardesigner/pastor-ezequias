@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Package } from 'lucide-react';
+import { Camera, Package, Film } from 'lucide-react';
 import { useRoute } from '../../hooks/useRoute';
 import { CAMPAIGN_CONFIG } from '../../config/campaign';
 import './HomePage.css';
@@ -68,6 +68,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
       type: 'internal',
       target: 'materiais',
       icon: <Package size={20} />,
+    },
+    {
+      id: 'videos',
+      label: 'Vídeos para Redes Sociais',
+      type: 'internal',
+      target: 'videos',
+      icon: <Film size={20} />,
     },
     {
       id: 'whatsapp',

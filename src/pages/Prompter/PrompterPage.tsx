@@ -87,6 +87,21 @@ export const PrompterPage: React.FC = () => {
   // Estado para Edição Direta no Modo Leitura
   const [isInlineEditing, setIsInlineEditing] = useState<boolean>(false);
   const inlineTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editorTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editTargetRef = useRef<{ charIndex: number; scrollTop: number }>({
+    charIndex: 0,
+    scrollTop: 0,
+  });
+
+  // Linhas do roteiro em array memoizado
+  const scriptLines = useMemo(() => text.split('\n'), [text]);
+
+  // Sistema de Roleta Orientada a Linhas (Etapas)
+  const [activeLineIndex, setActiveLineIndex] = useState<number>(0);
+  const activeLineIndexRef = useRef<number>(0);
+  const linePositionsRef = useRef<number[]>([]);
+  const wheelAccumulatorRef = useRef<number>(0);
+  const wheelTimeoutRef = useRef<number | null>(null);
 
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -96,7 +111,8 @@ export const PrompterPage: React.FC = () => {
   const touchStateRef = useRef<{
     startX: number;
     startY: number;
-    startScroll: number;
+    startLine: number;
+    lastNotchStep: number;
     isDragging: boolean;
   } | null>(null);
 
@@ -270,14 +286,139 @@ export const PrompterPage: React.FC = () => {
   // Reiniciar rolagem ao topo
   const handleRestart = useCallback(() => {
     currentScrollRef.current = 0;
+    activeLineIndexRef.current = 0;
+    setActiveLineIndex(0);
     if (scrollerRef.current) {
       scrollerRef.current.scrollTop = 0;
     }
     triggerControlsVisibility();
   }, [triggerControlsVisibility]);
 
+  // Calcular todas as posições de scroll para cada linha da roleta
+  const computeLinePositions = useCallback((): number[] => {
+    if (!scrollerRef.current) return [];
+    const scroller = scrollerRef.current;
+    const lineEls = scroller.querySelectorAll<HTMLElement>('.prompter-text-line');
+    if (lineEls.length === 0) return [];
+
+    const scrollerRect = scroller.getBoundingClientRect();
+    const currentScroll = scroller.scrollTop;
+    const guideRatio = settings.forceLandscape ? 0.33 : 0.36;
+    const guideOffset = scroller.clientHeight * guideRatio;
+    const maxScroll = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+
+    const positions: number[] = [];
+    lineEls.forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      const lineCenterInContent = (rect.top - scrollerRect.top + currentScroll) + rect.height / 2;
+      const targetScroll = Math.max(0, Math.min(maxScroll, lineCenterInContent - guideOffset));
+      positions.push(targetScroll);
+    });
+
+    return positions;
+  }, [settings.forceLandscape]);
+
+  // Determinar qual linha está ativa com base no scroll atual
+  const getActiveLineFromScroll = useCallback((scrollTop: number, positions: number[]): number => {
+    if (positions.length === 0) return 0;
+    let closestIdx = 0;
+    let minDiff = Infinity;
+    for (let i = 0; i < positions.length; i++) {
+      const diff = Math.abs(positions[i] - scrollTop);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIdx = i;
+      }
+    }
+    return closestIdx;
+  }, []);
+
+  // Função para navegar e travar a roleta na linha exata (etapas)
+  const scrollToLine = useCallback((targetIndex: number, smooth: boolean = true) => {
+    if (!scrollerRef.current) return;
+    const positions = linePositionsRef.current.length > 0 ? linePositionsRef.current : computeLinePositions();
+    if (positions.length === 0) return;
+
+    const clamped = Math.max(0, Math.min(positions.length - 1, targetIndex));
+    const targetScrollTop = positions[clamped];
+
+    activeLineIndexRef.current = clamped;
+    setActiveLineIndex(clamped);
+    currentScrollRef.current = targetScrollTop;
+
+    if (smooth) {
+      scrollerRef.current.scrollTo({
+        top: targetScrollTop,
+        behavior: 'smooth',
+      });
+    } else {
+      scrollerRef.current.scrollTop = targetScrollTop;
+    }
+
+    try {
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate(8);
+      }
+    } catch {}
+  }, [computeLinePositions]);
+
+  // Inicializar e recalcular posições da roleta quando entrar em leitura
+  useEffect(() => {
+    if (mode === 'reading') {
+      const id = requestAnimationFrame(() => {
+        const pos = computeLinePositions();
+        linePositionsRef.current = pos;
+      });
+      return () => cancelAnimationFrame(id);
+    }
+  }, [mode, computeLinePositions]);
+
+  // Auto-ajuste de posicionamento de acordo com o tamanho da fonte e largura, mantendo a linha ativa na mira
+  useEffect(() => {
+    if (mode !== 'reading') return;
+    const id = requestAnimationFrame(() => {
+      const pos = computeLinePositions();
+      linePositionsRef.current = pos;
+      scrollToLine(activeLineIndexRef.current, false);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [settings.fontSize, settings.maxWidth, settings.forceLandscape, computeLinePositions, scrollToLine, mode]);
+
+  // Recalcular posições quando a janela/orientação for alterada
+  useEffect(() => {
+    if (mode !== 'reading') return;
+    const handleResize = () => {
+      const pos = computeLinePositions();
+      linePositionsRef.current = pos;
+      scrollToLine(activeLineIndexRef.current, false);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [mode, computeLinePositions, scrollToLine]);
+
+  // Calcular o caractere exato e a rolagem atual para que o foco não salte ao início
+  const getReadingPosition = useCallback((targetLineIndex?: number): { charIndex: number; scrollTop: number } => {
+    const scrollTop = scrollerRef.current ? scrollerRef.current.scrollTop : currentScrollRef.current;
+    const lines = text.split('\n');
+
+    const effectiveLineIndex = targetLineIndex !== undefined ? targetLineIndex : activeLineIndexRef.current;
+
+    if (effectiveLineIndex >= 0 && effectiveLineIndex < lines.length) {
+      let charOffset = 0;
+      for (let i = 0; i < effectiveLineIndex; i++) {
+        charOffset += lines[i].length + 1;
+      }
+      return { charIndex: charOffset, scrollTop };
+    }
+
+    return { charIndex: 0, scrollTop };
+  }, [text]);
+
   // Voltar ao Editor
   const handleBackToEdit = useCallback(() => {
+    if (mode === 'reading') {
+      editTargetRef.current = getReadingPosition();
+    }
     setIsPlaying(false);
     setShowCountdown(false);
     setIsInlineEditing(false);
@@ -285,30 +426,108 @@ export const PrompterPage: React.FC = () => {
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
     }
-  }, []);
+  }, [mode, getReadingPosition]);
 
   // Alternar modo de edição direta na tela
-  const handleToggleInlineEdit = useCallback(() => {
+  const handleToggleInlineEdit = useCallback((targetLineIdx?: number) => {
     setIsInlineEditing((prev) => {
       const next = !prev;
       if (next) {
         setIsPlaying(false);
+        editTargetRef.current = getReadingPosition(targetLineIdx);
       } else {
+        if (scrollerRef.current) {
+          currentScrollRef.current = scrollerRef.current.scrollTop;
+        }
         setCopiedNotification('Texto salvo!');
         setTimeout(() => setCopiedNotification(null), 2000);
       }
       return next;
     });
-  }, []);
+  }, [getReadingPosition]);
 
-  // Ajustar altura da textarea quando entrar em modo de edição direta na tela
+  // Ajustar altura e posicionar foco/cursor exatamente na linha atual ao entrar em edição inline
   useEffect(() => {
     if (isInlineEditing && inlineTextareaRef.current) {
       const el = inlineTextareaRef.current;
+      const { charIndex, scrollTop } = editTargetRef.current;
+
       el.style.height = `${Math.max(window.innerHeight * 0.8, el.scrollHeight + 150)}px`;
-      el.focus();
+
+      try {
+        el.setSelectionRange(charIndex, charIndex);
+      } catch {}
+
+      try {
+        el.focus({ preventScroll: true });
+      } catch {
+        el.focus();
+      }
+
+      if (scrollerRef.current) {
+        scrollerRef.current.scrollTop = scrollTop;
+        currentScrollRef.current = scrollTop;
+      }
+
+      const frameId = requestAnimationFrame(() => {
+        if (scrollerRef.current) {
+          scrollerRef.current.scrollTop = scrollTop;
+          currentScrollRef.current = scrollTop;
+        }
+        try {
+          el.setSelectionRange(charIndex, charIndex);
+        } catch {}
+      });
+
+      const timerId = setTimeout(() => {
+        if (scrollerRef.current && scrollerRef.current.scrollTop === 0 && scrollTop > 30) {
+          scrollerRef.current.scrollTop = scrollTop;
+          currentScrollRef.current = scrollTop;
+        }
+        try {
+          el.setSelectionRange(charIndex, charIndex);
+        } catch {}
+      }, 200);
+
+      return () => {
+        cancelAnimationFrame(frameId);
+        clearTimeout(timerId);
+      };
     }
   }, [isInlineEditing]);
+
+  // Posicionar cursor na linha correspondente ao voltar ao editor principal
+  useEffect(() => {
+    if (mode === 'editor' && editorTextareaRef.current && editTargetRef.current.charIndex > 0) {
+      const el = editorTextareaRef.current;
+      const targetChar = editTargetRef.current.charIndex;
+
+      try {
+        el.setSelectionRange(targetChar, targetChar);
+      } catch {}
+
+      try {
+        el.focus({ preventScroll: true });
+      } catch {
+        el.focus();
+      }
+
+      const lines = text.split('\n');
+      let currentChars = 0;
+      let targetLine = 0;
+      for (let i = 0; i < lines.length; i++) {
+        currentChars += lines[i].length + 1;
+        if (currentChars >= targetChar) {
+          targetLine = i;
+          break;
+        }
+      }
+      const lineRatio = lines.length > 0 ? targetLine / lines.length : 0;
+      el.scrollTop = (el.scrollHeight - el.clientHeight) * lineRatio;
+
+      editTargetRef.current.charIndex = 0;
+    }
+  }, [mode, text]);
 
   // Motor de rolagem contínua a 60fps usando requestAnimationFrame
   useEffect(() => {
@@ -335,6 +554,16 @@ export const PrompterPage: React.FC = () => {
       if (scrollerRef.current) {
         scrollerRef.current.scrollTop = currentScrollRef.current;
 
+        // Atualizar linha ativa para feedback em tempo real na roleta
+        const pos = linePositionsRef.current;
+        if (pos.length > 0) {
+          const activeIdx = getActiveLineFromScroll(currentScrollRef.current, pos);
+          if (activeIdx !== activeLineIndexRef.current) {
+            activeLineIndexRef.current = activeIdx;
+            setActiveLineIndex(activeIdx);
+          }
+        }
+
         // Se chegou ao final do conteúdo
         const maxScroll = scrollerRef.current.scrollHeight - scrollerRef.current.clientHeight;
         if (currentScrollRef.current >= maxScroll && maxScroll > 0) {
@@ -354,12 +583,18 @@ export const PrompterPage: React.FC = () => {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [mode, isPlaying, showCountdown, settings.speed]);
+  }, [mode, isPlaying, showCountdown, settings.speed, getActiveLineFromScroll]);
 
   // Sincronizar scroll quando o usuário rolar manualmente com o dedo/mouse
   const handleManualScroll = () => {
-    if (scrollerRef.current && !touchStateRef.current?.isDragging) {
-      currentScrollRef.current = scrollerRef.current.scrollTop;
+    if (!scrollerRef.current || touchStateRef.current?.isDragging || isInlineEditing) return;
+    currentScrollRef.current = scrollerRef.current.scrollTop;
+    if (linePositionsRef.current.length > 0) {
+      const activeIdx = getActiveLineFromScroll(currentScrollRef.current, linePositionsRef.current);
+      if (activeIdx !== activeLineIndexRef.current) {
+        activeLineIndexRef.current = activeIdx;
+        setActiveLineIndex(activeIdx);
+      }
     }
   };
 
@@ -388,9 +623,11 @@ export const PrompterPage: React.FC = () => {
             setIsPlaying(false);
             setShowControls(true);
           } else if (action === 'restart') {
-            currentScrollRef.current = 0;
-            if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
-            triggerControlsVisibility();
+            handleRestart();
+          } else if (action === 'step_prev') {
+            scrollToLine(activeLineIndexRef.current - 1, true);
+          } else if (action === 'step_next') {
+            scrollToLine(activeLineIndexRef.current + 1, true);
           } else if (action === 'countdown') {
             setMode('reading');
             setShowCountdown(true);
@@ -450,71 +687,103 @@ export const PrompterPage: React.FC = () => {
     };
   }, [text, isPlaying, settings.speed, settings.fontSize, settings.textColor, updateSetting, triggerControlsVisibility, setText]);
 
-  // Gestos de Touch para percorrer o script (para cima / para baixo) em qualquer orientação
+  // Gestos de Touch no formato Roleta (em etapas, cada etapa é 1 linha)
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (isInlineEditing) return;
     if (e.touches.length === 1 && scrollerRef.current) {
+      if (linePositionsRef.current.length === 0) {
+        linePositionsRef.current = computeLinePositions();
+      }
       touchStateRef.current = {
         startX: e.touches[0].clientX,
         startY: e.touches[0].clientY,
-        startScroll: scrollerRef.current.scrollTop,
+        startLine: activeLineIndexRef.current,
+        lastNotchStep: 0,
         isDragging: false,
       };
     }
     triggerControlsVisibility();
-  }, [triggerControlsVisibility]);
+  }, [isInlineEditing, computeLinePositions, triggerControlsVisibility]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!touchStateRef.current || !scrollerRef.current) return;
+    if (isInlineEditing || !touchStateRef.current || !scrollerRef.current) return;
     const currentX = e.touches[0].clientX;
     const currentY = e.touches[0].clientY;
     const totalDx = currentX - touchStateRef.current.startX;
     const totalDy = currentY - touchStateRef.current.startY;
 
-    if (!touchStateRef.current.isDragging && (Math.abs(totalDx) > 5 || Math.abs(totalDy) > 5)) {
+    if (!touchStateRef.current.isDragging && (Math.abs(totalDx) > 6 || Math.abs(totalDy) > 6)) {
       touchStateRef.current.isDragging = true;
+      if (isPlaying) {
+        setIsPlaying(false);
+        setShowControls(true);
+      }
     }
 
     if (touchStateRef.current.isDragging) {
-      let scrollDelta = 0;
+      // Roleta tátil por toque: distância necessária para avançar 1 linha
+      // Se adapta dinamicamente de acordo com o tamanho da fonte
+      const notchDistance = Math.max(28, Math.min(52, settings.fontSize * 0.8));
+
+      let primaryDelta = 0;
       if (settings.forceLandscape) {
-        // No modo paisagem forçado (90°): arrastar o dedo para frente (totalDx > 0) avança o texto para baixo
-        if (Math.abs(totalDx) >= Math.abs(totalDy)) {
-          scrollDelta = totalDx * 1.5;
-        } else {
-          scrollDelta = -totalDy * 1.5;
-        }
+        primaryDelta = Math.abs(totalDx) >= Math.abs(totalDy) ? totalDx : -totalDy;
       } else {
-        // No modo retrato: arrastar para cima (-totalDy > 0) avança o texto para baixo
-        scrollDelta = -totalDy * 1.3;
+        primaryDelta = -totalDy;
       }
 
-      const maxScroll = scrollerRef.current.scrollHeight - scrollerRef.current.clientHeight;
-      const targetScroll = Math.max(0, Math.min(maxScroll, touchStateRef.current.startScroll + scrollDelta));
-      scrollerRef.current.scrollTop = targetScroll;
-      currentScrollRef.current = targetScroll;
+      const currentStep = Math.round(primaryDelta / notchDistance);
+      if (currentStep !== touchStateRef.current.lastNotchStep) {
+        touchStateRef.current.lastNotchStep = currentStep;
+        const targetLine = touchStateRef.current.startLine + currentStep;
+        scrollToLine(targetLine, true);
+      }
     }
-  }, [settings.forceLandscape]);
+  }, [isInlineEditing, isPlaying, settings.forceLandscape, settings.fontSize, scrollToLine]);
 
   const handleTouchEnd = useCallback(() => {
+    if (isInlineEditing) return;
     if (touchStateRef.current?.isDragging) {
+      scrollToLine(activeLineIndexRef.current, true);
       setTimeout(() => {
         if (touchStateRef.current) {
           touchStateRef.current.isDragging = false;
         }
       }, 100);
     }
-  }, []);
+  }, [isInlineEditing, scrollToLine]);
 
-  // Rolagem por mousewheel / trackpad
+  // Rolagem por mousewheel / trackpad em formato de roleta linha por linha
   const handleWheel = useCallback((e: React.WheelEvent) => {
-    if (!scrollerRef.current) return;
-    const delta = e.deltaY || e.deltaX;
-    const maxScroll = scrollerRef.current.scrollHeight - scrollerRef.current.clientHeight;
-    const targetScroll = Math.max(0, Math.min(maxScroll, scrollerRef.current.scrollTop + delta));
-    scrollerRef.current.scrollTop = targetScroll;
-    currentScrollRef.current = targetScroll;
+    if (!scrollerRef.current || isInlineEditing) return;
+    e.preventDefault();
+
+    if (isPlaying) {
+      setIsPlaying(false);
+      setShowControls(true);
+    }
+
+    const delta = e.deltaY;
+    wheelAccumulatorRef.current += delta;
+
+    // Cada ~32px acumulados do scroll gira a roleta em 1 linha
+    const stepThreshold = 32;
+
+    if (Math.abs(wheelAccumulatorRef.current) >= stepThreshold) {
+      const lineSteps = Math.trunc(wheelAccumulatorRef.current / stepThreshold);
+      wheelAccumulatorRef.current = wheelAccumulatorRef.current % stepThreshold;
+
+      const currentIdx = activeLineIndexRef.current;
+      scrollToLine(currentIdx + lineSteps, true);
+    }
+
+    if (wheelTimeoutRef.current) clearTimeout(wheelTimeoutRef.current);
+    wheelTimeoutRef.current = window.setTimeout(() => {
+      wheelAccumulatorRef.current = 0;
+    }, 140);
+
     triggerControlsVisibility();
-  }, [triggerControlsVisibility]);
+  }, [isInlineEditing, isPlaying, scrollToLine, triggerControlsVisibility]);
 
   // Atalhos de teclado no Desktop
   useEffect(() => {
@@ -545,25 +814,35 @@ export const PrompterPage: React.FC = () => {
         togglePlay();
       } else if (e.code === 'ArrowUp') {
         e.preventDefault();
-        updateSetting('speed', Math.min(100, settings.speed + 2));
+        updateSetting('speed', Math.min(100, settings.speed + 1));
         triggerControlsVisibility();
       } else if (e.code === 'ArrowDown') {
         e.preventDefault();
-        updateSetting('speed', Math.max(1, settings.speed - 2));
+        updateSetting('speed', Math.max(1, settings.speed - 1));
         triggerControlsVisibility();
       } else if (e.code === 'ArrowLeft') {
         e.preventDefault();
-        if (scrollerRef.current) {
-          currentScrollRef.current = Math.max(0, currentScrollRef.current - 220);
-          scrollerRef.current.scrollTop = currentScrollRef.current;
-        }
+        scrollToLine(activeLineIndexRef.current - 1, true);
         triggerControlsVisibility();
       } else if (e.code === 'ArrowRight') {
         e.preventDefault();
-        if (scrollerRef.current) {
-          currentScrollRef.current += 220;
-          scrollerRef.current.scrollTop = currentScrollRef.current;
-        }
+        scrollToLine(activeLineIndexRef.current + 1, true);
+        triggerControlsVisibility();
+      } else if (e.code === 'PageUp') {
+        e.preventDefault();
+        scrollToLine(activeLineIndexRef.current - 5, true);
+        triggerControlsVisibility();
+      } else if (e.code === 'PageDown') {
+        e.preventDefault();
+        scrollToLine(activeLineIndexRef.current + 5, true);
+        triggerControlsVisibility();
+      } else if (e.code === 'Home') {
+        e.preventDefault();
+        scrollToLine(0, true);
+        triggerControlsVisibility();
+      } else if (e.code === 'End') {
+        e.preventDefault();
+        scrollToLine(scriptLines.length - 1, true);
         triggerControlsVisibility();
       } else if (e.key === 'e' || e.key === 'E') {
         e.preventDefault();
@@ -591,6 +870,7 @@ export const PrompterPage: React.FC = () => {
     isInlineEditing,
     settings.speed,
     settings.forceLandscape,
+    scriptLines.length,
     handleStartReading,
     handleToggleInlineEdit,
     togglePlay,
@@ -599,6 +879,7 @@ export const PrompterPage: React.FC = () => {
     handleRestart,
     toggleFullscreen,
     handleBackToEdit,
+    scrollToLine,
   ]);
 
   // Sincronizar bloqueio de orientação de tela do dispositivo quando suportado
@@ -826,6 +1107,7 @@ export const PrompterPage: React.FC = () => {
           <main className="prompter-editor-main">
             <div className="editor-textarea-wrapper">
               <textarea
+                ref={editorTextareaRef}
                 className="prompter-textarea"
                 placeholder="Cole ou digite aqui seu texto para o teleprompter...
 
@@ -834,7 +1116,6 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
                 onChange={(e) => {
                   setText(e.target.value);
                 }}
-                autoFocus
               />
 
               <div className="textarea-quick-actions">
@@ -1271,7 +1552,7 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
       {/* ======================================================== */}
       {mode === 'reading' && (
         <div
-          className={`prompter-reading-screen ${settings.mirrorHorizontal ? 'is-mirrored' : ''} ${settings.forceLandscape ? 'force-landscape' : ''}`}
+          className={`prompter-reading-screen ${settings.mirrorHorizontal ? 'is-mirrored' : ''} ${settings.forceLandscape ? 'force-landscape' : ''} ${isInlineEditing ? 'is-inline-editing-active' : ''}`}
           onClick={handleScreenClick}
           onMouseMove={triggerControlsVisibility}
           onTouchStart={handleTouchStart}
@@ -1296,11 +1577,32 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
           )}
 
           {/* Guia / Marcador Visual de Leitura Central */}
+          {/* Guia / Marcador Visual de Leitura Central com Etapas da Roleta */}
           {settings.lineGuide && !showCountdown && (
-            <div className="prompter-focus-line-guide" pointer-events="none">
-              <div className="guide-arrow left">▶</div>
+            <div className="prompter-focus-line-guide">
+              <button
+                type="button"
+                className="guide-arrow-btn left"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  scrollToLine(activeLineIndex - 1, true);
+                }}
+                title="Linha anterior (Seta Esquerda)"
+              >
+                ▲
+              </button>
               <div className="guide-band" />
-              <div className="guide-arrow right">◀</div>
+              <button
+                type="button"
+                className="guide-arrow-btn right"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  scrollToLine(activeLineIndex + 1, true);
+                }}
+                title="Próxima linha (Seta Direita)"
+              >
+                ▼
+              </button>
             </div>
           )}
 
@@ -1334,12 +1636,15 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
                       e.target.style.height = `${e.target.scrollHeight + 100}px`;
                     }
                   }}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  onTouchMove={(e) => e.stopPropagation()}
+                  onTouchEnd={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                   placeholder="Digite ou edite o roteiro diretamente na tela..."
                   style={{
                     fontSize: `${settings.fontSize}px`,
                     textAlign: settings.textAlign,
                   }}
-                  autoFocus
                 />
               ) : (
                 <div
@@ -1348,11 +1653,25 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
                     fontSize: `${settings.fontSize}px`,
                     textAlign: settings.textAlign,
                   }}
-                  onDoubleClick={handleToggleInlineEdit}
-                  title="Dê duplo clique para editar este texto diretamente (ou pressione E)"
+                  onDoubleClick={() => handleToggleInlineEdit()}
+                  title="Dê um clique para alinhar a linha na roleta ou duplo clique para editar"
                 >
-                  {text.split('\n').map((line, lineIdx) => (
-                    <div key={lineIdx} className="prompter-text-line">
+                  {scriptLines.map((line, lineIdx) => (
+                    <div
+                      key={lineIdx}
+                      className="prompter-text-line"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isPlaying) {
+                          scrollToLine(lineIdx, true);
+                        }
+                      }}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleInlineEdit(lineIdx);
+                      }}
+                      title={!isPlaying ? `Linha ${lineIdx + 1}: Clique para centralizar` : undefined}
+                    >
                       {line || '\u00A0'}
                     </div>
                   ))}
@@ -1386,6 +1705,8 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
               estimatedSpeechTime={estimatedSpeechTime}
               onOpenP2PModal={() => setShowP2PModal(true)}
               isP2PConnected={isP2PConnected}
+              currentLine={activeLineIndex}
+              totalLines={scriptLines.length}
             />
           )}
         </div>

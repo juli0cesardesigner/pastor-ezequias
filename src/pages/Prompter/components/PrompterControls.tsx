@@ -35,6 +35,8 @@ interface PrompterControlsProps {
   estimatedSpeechTime?: string;
   onOpenP2PModal?: () => void;
   isP2PConnected?: boolean;
+  currentLine?: number;
+  totalLines?: number;
 }
 
 export const PrompterControls: React.FC<PrompterControlsProps> = ({
@@ -51,23 +53,25 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
   estimatedSpeechTime,
   onOpenP2PModal,
   isP2PConnected,
+  currentLine,
+  totalLines,
 }) => {
   const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
 
   const increaseSpeed = () => {
-    onUpdateSetting('speed', Math.min(100, settings.speed + 2));
+    onUpdateSetting('speed', Math.min(100, settings.speed + 1));
   };
 
   const decreaseSpeed = () => {
-    onUpdateSetting('speed', Math.max(1, settings.speed - 2));
+    onUpdateSetting('speed', Math.max(1, settings.speed - 1));
   };
 
   const increaseFontSize = () => {
-    onUpdateSetting('fontSize', Math.min(110, settings.fontSize + 4));
+    onUpdateSetting('fontSize', Math.min(110, settings.fontSize + 1));
   };
 
   const decreaseFontSize = () => {
-    onUpdateSetting('fontSize', Math.max(20, settings.fontSize - 4));
+    onUpdateSetting('fontSize', Math.max(20, settings.fontSize - 1));
   };
 
   const toggleLandscape = async () => {
@@ -124,11 +128,20 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
                 <span className="prompter-badge-time is-editing" title="Modo de edição direta ativo">
                   ✏️ Editando na Tela
                 </span>
-              ) : estimatedSpeechTime ? (
-                <span className="prompter-badge-time" title="Tempo estimado de fala">
-                  {estimatedSpeechTime}
-                </span>
-              ) : null}
+              ) : (
+                <div className="prompter-hud-status-badges">
+                  {totalLines && totalLines > 1 ? (
+                    <span className="prompter-badge-line" title="Linha ativa na roleta / Total de linhas">
+                      Linha {currentLine !== undefined ? currentLine + 1 : 1}/{totalLines}
+                    </span>
+                  ) : null}
+                  {estimatedSpeechTime ? (
+                    <span className="prompter-badge-time" title="Tempo estimado de fala">
+                      {estimatedSpeechTime}
+                    </span>
+                  ) : null}
+                </div>
+              )}
             </div>
 
             <div className="prompter-hud-actions-right">
@@ -323,11 +336,20 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
               <span className="prompter-landscape-time-badge is-editing" title="Modo de edição direta ativo">
                 ✏️ Editando
               </span>
-            ) : estimatedSpeechTime ? (
-              <span className="prompter-landscape-time-badge" title="Tempo estimado de fala">
-                {estimatedSpeechTime}
-              </span>
-            ) : null}
+            ) : (
+              <>
+                {totalLines && totalLines > 1 ? (
+                  <span className="prompter-landscape-line-badge" title="Linha ativa na roleta / Total de linhas">
+                    L {currentLine !== undefined ? currentLine + 1 : 1}/{totalLines}
+                  </span>
+                ) : null}
+                {estimatedSpeechTime ? (
+                  <span className="prompter-landscape-time-badge" title="Tempo estimado de fala">
+                    {estimatedSpeechTime}
+                  </span>
+                ) : null}
+              </>
+            )}
           </div>
 
           {/* Lado Direito: Stepper Velocidade + Stepper Fonte + Botão Play Amarelo */}
@@ -461,7 +483,7 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
                     type="range"
                     min="20"
                     max="110"
-                    step="2"
+                    step="1"
                     value={settings.fontSize}
                     onChange={(e) => onUpdateSetting('fontSize', Number(e.target.value))}
                     className="prompter-slider"

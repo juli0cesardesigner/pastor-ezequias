@@ -303,7 +303,7 @@ export class PrompterP2PManager {
   /**
    * Envia comando de controle (play, pause, restart, countdown)
    */
-  public sendControlAction(action: 'play' | 'pause' | 'restart' | 'countdown') {
+  public sendControlAction(action: 'play' | 'pause' | 'restart' | 'countdown' | 'step_prev' | 'step_next') {
     return this.sendMessage({
       type: 'CONTROL_ACTION',
       payload: { action },

@@ -41,6 +41,17 @@ function getRouteFromLocation(): PageRoute {
   if (path === '/agenda' || path === '/agenda/' || path.startsWith('/agenda') || hash === 'agenda') {
     return 'agenda';
   }
+  if (
+    path === '/videos' ||
+    path === '/videos/' ||
+    path.startsWith('/videos') ||
+    path === '/midias' ||
+    path === '/midias/' ||
+    hash === 'videos' ||
+    hash === 'midias'
+  ) {
+    return 'videos';
+  }
   if (path === '/apoio' || path === '/apoio/' || path.startsWith('/apoio') || hash === 'apoio') {
     return 'apoio';
   }

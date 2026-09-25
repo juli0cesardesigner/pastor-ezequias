@@ -1155,6 +1155,8 @@
   -ms-hyphens: none !important;
   box-sizing: border-box !important;
   display: block;
+  resize: none !important;
+  caret-color: #fbbf24;
 }
 
 .prompter-text-body {
@@ -1168,9 +1170,18 @@
 }
 
 .prompter-text-line {
-  margin-bottom: 0.12em;
+  margin-bottom: 0.14em;
   display: block;
+  cursor: pointer;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s ease;
+  border-radius: 6px;
+  padding: 0.05em 0.2em;
 }
+
+.prompter-text-line:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
 
 .prompter-word-unit {
   display: inline-block;
@@ -1358,6 +1369,75 @@
   opacity: 0.85;
   padding: 0 0.35rem;
   text-shadow: 0 0 10px rgba(245, 158, 11, 0.8);
+}
+
+.guide-arrow-btn {
+  background: rgba(22, 22, 26, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  font-size: 0.8rem;
+  font-weight: 900;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7);
+  z-index: 10;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.guide-arrow-btn:hover {
+  background: #fbbf24;
+  color: #000000;
+  transform: scale(1.15);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.7);
+}
+
+.guide-arrow-btn:active {
+  transform: scale(0.92);
+}
+
+.prompter-hud-status-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: nowrap;
+}
+
+.prompter-badge-line {
+  font-size: 0.78rem;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  padding: 0.22rem 0.65rem;
+  border-radius: 9999px;
+  white-space: nowrap;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.prompter-landscape-line-badge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 0.32rem 0.75rem;
+  border-radius: 9999px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  margin-left: 0.2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 /* ==========================================================================

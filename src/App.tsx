@@ -8,6 +8,7 @@ import { AdminPage } from './pages/Admin/AdminPage';
 import { VisitasMapPage } from './pages/VisitasMap/VisitasMapPage';
 import { PrompterPage } from './pages/Prompter/PrompterPage';
 import { AgendaPage } from './pages/Agenda/AgendaPage';
+import { VideosPage } from './pages/Videos/VideosPage';
 import { useRoute } from './hooks/useRoute';
 import './App.css';
 
@@ -58,6 +59,17 @@ export const App: React.FC = () => {
 
   if (currentRoute === 'agenda') {
     return <AgendaPage />;
+  }
+
+  if (currentRoute === 'videos') {
+    return (
+      <div className="app-container">
+        <main className="main-content videos-main">
+          <VideosPage onBackToHome={() => navigateTo('home')} />
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
   return (

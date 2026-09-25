@@ -16,7 +16,8 @@
   flex: 1;
 }
 
-.main-content.admin-main {
+.main-content.admin-main,
+.main-content.videos-main {
   max-width: 1040px;
 }
 
