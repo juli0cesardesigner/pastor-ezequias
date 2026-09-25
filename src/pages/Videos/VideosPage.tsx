@@ -11,7 +11,8 @@ import {
 } from 'lucide-react';
 import { useCampaignVideos } from '../../hooks/useCampaignVideos';
 import { VideoCard } from './components/VideoCard';
-import type { MediaFolder } from '../../types/videos';
+import { MediaExpandedModal } from './components/MediaExpandedModal';
+import type { CampaignVideo, MediaFolder } from '../../types/videos';
 import './VideosPage.css';
 
 interface VideosPageProps {
@@ -26,6 +27,10 @@ interface FolderTabItem {
 
 export const VideosPage: React.FC<VideosPageProps> = ({ onBackToHome }) => {
   const [selectedFolder, setSelectedFolder] = useState<MediaFolder>('videos');
+  const [expandedItem, setExpandedItem] = useState<{
+    media: CampaignVideo;
+    mode: 'video' | 'image';
+  } | null>(null);
 
   const {
     videos,
@@ -47,6 +52,14 @@ export const VideosPage: React.FC<VideosPageProps> = ({ onBackToHome }) => {
 
   // Itens da pasta selecionada (já ordenados do mais novo para o mais antigo)
   const currentItems = videos.filter((v) => (v.folder || 'videos') === selectedFolder);
+
+  const handlePlayVideo = (video: CampaignVideo) => {
+    setExpandedItem({ media: video, mode: 'video' });
+  };
+
+  const handleExpandImage = (video: CampaignVideo) => {
+    setExpandedItem({ media: video, mode: 'image' });
+  };
 
   return (
     <div className="videos-page-container">
@@ -123,11 +136,24 @@ export const VideosPage: React.FC<VideosPageProps> = ({ onBackToHome }) => {
                 video={item}
                 isDownloading={downloadingId === item.id}
                 onDownload={handleDownload}
+                onPlayVideo={handlePlayVideo}
+                onExpandImage={handleExpandImage}
               />
             ))}
           </div>
         )}
       </main>
+
+      {/* Modal de Tela Cheia com Player ou Imagem Ampliada + Voltar + Download Direto */}
+      {expandedItem && (
+        <MediaExpandedModal
+          media={expandedItem.media}
+          mode={expandedItem.mode}
+          isDownloading={downloadingId === expandedItem.media.id}
+          onDownload={handleDownload}
+          onClose={() => setExpandedItem(null)}
+        />
+      )}
     </div>
   );
 };

@@ -86,6 +86,44 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 0.3s ease;
+}
+
+.video-mask-1x1.clickable {
+  cursor: pointer;
+}
+
+.video-mask-1x1.clickable:hover .media-image-cover {
+  transform: scale(1.04);
+}
+
+.media-expand-hint-badge {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.85;
+  transition: all 0.2s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.video-mask-1x1:hover .media-expand-hint-badge {
+  opacity: 1;
+  transform: scale(1.05);
+  background: rgba(21, 75, 178, 0.85);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fde047;
 }
 
 /* Visualização para Músicas */

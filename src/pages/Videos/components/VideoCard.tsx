@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Download, Play, Pause, Loader2, Check, Music, Sparkles } from 'lucide-react';
+import { Download, Play, Pause, Loader2, Check, Music, Sparkles, ZoomIn } from 'lucide-react';
 import type { CampaignVideo, MediaFolder } from '../../../types/videos';
 import './VideoCard.css';
 
@@ -7,47 +7,46 @@ interface VideoCardProps {
   video: CampaignVideo;
   isDownloading: boolean;
   onDownload: (video: CampaignVideo) => void;
+  onPlayVideo?: (video: CampaignVideo) => void;
+  onExpandImage?: (video: CampaignVideo) => void;
 }
 
 export const VideoCard: React.FC<VideoCardProps> = ({
   video,
   isDownloading,
-  onDownload
+  onDownload,
+  onPlayVideo,
+  onExpandImage
 }) => {
   const folder: MediaFolder = video.folder || 'videos';
-  const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [hasPlayedOnce, setHasPlayedOnce] = useState<boolean>(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
   const [downloadSuccess, setDownloadSuccess] = useState<boolean>(false);
 
-  // Controle de reprodução para vídeos
-  const togglePlayVideo = () => {
-    if (!videoRef.current) return;
-    if (videoRef.current.paused) {
-      videoRef.current.play();
-      setIsPlaying(true);
-      setHasPlayedOnce(true);
-    } else {
-      videoRef.current.pause();
-      setIsPlaying(false);
-    }
-  };
-
-  // Controle de reprodução para áudio/música
-  const togglePlayAudio = () => {
+  // Controle de reprodução para áudio/música local
+  const togglePlayAudio = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!audioRef.current) return;
     if (audioRef.current.paused) {
       audioRef.current.play();
-      setIsPlaying(true);
+      setIsPlayingAudio(true);
     } else {
       audioRef.current.pause();
-      setIsPlaying(false);
+      setIsPlayingAudio(false);
     }
   };
 
-  const handleDownloadClick = async () => {
+  const handleBoxClick = () => {
+    if (folder === 'videos') {
+      onPlayVideo?.(video);
+    } else if (folder === 'imagens' || folder === 'figurinhas') {
+      onExpandImage?.(video);
+    }
+  };
+
+  const handleDownloadClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     await onDownload(video);
     setDownloadSuccess(true);
     setTimeout(() => setDownloadSuccess(false), 3000);
@@ -71,37 +70,41 @@ export const VideoCard: React.FC<VideoCardProps> = ({
 
   return (
     <article className="video-supporter-card">
-      {/* Máscara 1:1 solicitada pelo usuário para ocupar pouco espaço */}
-      <div className={`video-mask-1x1 ${folder}`}>
+      {/* Máscara 1:1 com clique para abrir player em tela cheia (vídeo) ou ampliar (imagem) */}
+      <div
+        className={`video-mask-1x1 ${folder} clickable`}
+        onClick={handleBoxClick}
+        role="button"
+        tabIndex={0}
+        aria-label={folder === 'videos' ? 'Assistir vídeo' : 'Ampliar imagem'}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            handleBoxClick();
+          }
+        }}
+      >
         {folder === 'videos' && (
           <>
             <video
-              ref={videoRef}
               src={video.videoUrl}
               poster={video.posterUrl}
               preload="metadata"
               playsInline
-              controls={hasPlayedOnce}
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-              onEnded={() => setIsPlaying(false)}
+              muted
               className="video-element-cover"
-              onClick={togglePlayVideo}
             />
 
-            {!isPlaying && (
-              <button
-                type="button"
-                className="video-play-overlay-btn"
-                aria-label="Reproduzir vídeo"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  togglePlayVideo();
-                }}
-              >
-                <Play size={26} fill="currentColor" />
-              </button>
-            )}
+            <button
+              type="button"
+              className="video-play-overlay-btn"
+              aria-label="Assistir em tela cheia"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPlayVideo?.(video);
+              }}
+            >
+              <Play size={26} fill="currentColor" />
+            </button>
           </>
         )}
 
@@ -113,6 +116,10 @@ export const VideoCard: React.FC<VideoCardProps> = ({
               className="media-image-cover"
               loading="lazy"
             />
+            <div className="media-expand-hint-badge" title="Clique para ampliar">
+              <ZoomIn size={14} />
+              <span>Ampliar</span>
+            </div>
           </div>
         )}
 
@@ -121,9 +128,9 @@ export const VideoCard: React.FC<VideoCardProps> = ({
             <audio
               ref={audioRef}
               src={video.videoUrl}
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-              onEnded={() => setIsPlaying(false)}
+              onPlay={() => setIsPlayingAudio(true)}
+              onPause={() => setIsPlayingAudio(false)}
+              onEnded={() => setIsPlayingAudio(false)}
             />
 
             {video.posterUrl ? (
@@ -137,13 +144,10 @@ export const VideoCard: React.FC<VideoCardProps> = ({
             <button
               type="button"
               className="audio-play-btn"
-              aria-label={isPlaying ? 'Pausar áudio' : 'Ouvir áudio'}
-              onClick={(e) => {
-                e.stopPropagation();
-                togglePlayAudio();
-              }}
+              aria-label={isPlayingAudio ? 'Pausar áudio' : 'Ouvir áudio'}
+              onClick={togglePlayAudio}
             >
-              {isPlaying ? <Pause size={24} /> : <Play size={24} fill="currentColor" />}
+              {isPlayingAudio ? <Pause size={24} /> : <Play size={24} fill="currentColor" />}
             </button>
           </div>
         )}
@@ -160,6 +164,10 @@ export const VideoCard: React.FC<VideoCardProps> = ({
             <div className="sticker-tag-badge">
               <Sparkles size={11} />
               <span>Figurinha</span>
+            </div>
+            <div className="media-expand-hint-badge" title="Clique para ampliar">
+              <ZoomIn size={14} />
+              <span>Ampliar</span>
             </div>
           </div>
         )}
