@@ -1,0 +1,111 @@
+.election-thermometer-box {
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 10px 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  color: #ffffff;
+  pointer-events: auto;
+  max-width: 100%;
+}
+
+.thermometer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+
+.thermometer-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.thermometer-legend-items {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.thermometer-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.thermometer-step:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.thermometer-step.is-selected {
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+.step-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.step-label {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.step-zero {
+  opacity: 0.85;
+}
+
+.step-top {
+  animation: pulseTop 2s infinite ease-in-out;
+}
+
+@keyframes pulseTop {
+  0%, 100% {
+    box-shadow: 0 0 4px #ef4444;
+  }
+  50% {
+    box-shadow: 0 0 12px #ef4444;
+  }
+}
+
+@media (max-width: 860px) {
+  .election-thermometer-box {
+    padding: 8px 10px;
+    border-radius: 10px;
+  }
+
+  .thermometer-step {
+    padding: 3px 6px;
+    font-size: 0.7rem;
+    gap: 4px;
+  }
+
+  .step-indicator {
+    width: 8px;
+    height: 8px;
+  }
+}

@@ -1,0 +1,725 @@
+.election-map-canvas-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: #0b1120;
+  overflow: hidden;
+}
+
+.election-leaflet-element {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* Floating Controls */
+.map-floating-panel {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+  pointer-events: auto;
+}
+
+.map-control-btn-group {
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.map-control-btn-group.dropdown-group {
+  overflow: visible !important;
+}
+
+.map-action-btn {
+  width: 38px;
+  height: 38px;
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.map-action-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.map-action-btn:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Camadas dropdown */
+.map-layers-menu {
+  position: absolute;
+  right: 48px;
+  top: 0;
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 125px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), 0 0 16px rgba(59, 130, 246, 0.2);
+  z-index: 2500;
+  pointer-events: auto;
+  animation: fadeInMenu 0.18s ease-out;
+}
+
+@keyframes fadeInMenu {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+
+.map-layer-opt {
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.map-layer-opt:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.map-layer-opt.active {
+  background: #3b82f6;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+
+/* Custom Marker CSS for Leaflet */
+.election-marker-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+}
+
+.election-marker-container:hover {
+  transform: scale(1.22);
+  z-index: 9999 !important;
+}
+
+.marker-zero-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #475569;
+  border: 1.5px solid #64748b;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s ease;
+}
+
+.election-marker-container:hover .marker-zero-dot {
+  background: #94a3b8;
+  border-color: #cbd5e1;
+}
+
+.marker-vote-bubble {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 800;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  position: relative;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.marker-vote-bubble.has-pulse::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  opacity: 0.6;
+  animation: markerGlowPulse 2.4s infinite ease-out;
+}
+
+@keyframes markerGlowPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* Custom Leaflet Popup Card */
+.leaflet-popup-content-wrapper {
+  background: rgba(15, 23, 42, 0.95) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 14px !important;
+  padding: 0 !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6) !important;
+  color: #ffffff !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.4 !important;
+}
+
+.leaflet-popup-tip {
+  background: rgba(15, 23, 42, 0.95) !important;
+}
+
+.city-popup-card {
+  padding: 14px 16px;
+  min-width: 220px;
+}
+
+.city-popup-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+
+.city-popup-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.city-popup-sub {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  display: block;
+  margin-top: 2px;
+}
+
+.city-popup-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.city-popup-main-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.city-popup-votes-number {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.city-popup-votes-label {
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.city-popup-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.city-popup-row strong {
+  color: #f1f5f9;
+}
+
+@media (max-width: 860px) {
+  .map-floating-panel {
+    top: 10px;
+    right: 10px;
+  }
+}
+
+/* Colatina Bairros Mode Banner */
+.colatina-bairros-banner {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  padding: 8px 16px;
+  border-radius: 9999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(245, 158, 11, 0.2);
+  color: #ffffff;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  animation: slideDownBanner 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
+
+@keyframes slideDownBanner {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.banner-badge-colatina {
+  background: #f59e0b;
+  color: #0f172a;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.banner-text-info strong {
+  color: #fde68a;
+}
+
+.btn-banner-reset-zoom {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-banner-reset-zoom:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* Bairro Marker Style */
+.bairro-marker-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.bairro-marker-wrapper:hover {
+  transform: scale(1.18);
+  z-index: 9999 !important;
+}
+
+.bairro-bubble {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 800;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.bairro-name-tag {
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #f8fafc;
+  white-space: nowrap;
+  margin-top: 2px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+.city-popup-bairro-tag {
+  display: inline-block;
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
+.city-popup-locais {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.locais-label {
+  display: block;
+  font-weight: 600;
+  color: #cbd5e1;
+  margin-bottom: 2px;
+}
+
+@media (max-width: 860px) {
+  .colatina-bairros-banner {
+    width: calc(100% - 20px);
+    top: 8px;
+    padding: 6px 10px;
+    font-size: 0.72rem;
+    justify-content: space-between;
+  }
+}
+
+/* Banner Controls & Edit Mode Active */
+.banner-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.colatina-bairros-banner.banner-edit-active {
+  border-color: #f59e0b;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6), 0 0 20px rgba(245, 158, 11, 0.4);
+  background: rgba(20, 24, 38, 0.96);
+}
+
+.btn-banner-edit-toggle {
+  background: #f59e0b;
+  color: #0f172a;
+  border: 1px solid #d97706;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-banner-edit-toggle:hover {
+  background: #fbbf24;
+  transform: translateY(-1px);
+}
+
+.btn-banner-edit-toggle.active {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #059669;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+/* Draggable Marker State */
+.bairro-marker-wrapper.is-draggable-mode {
+  cursor: grab !important;
+}
+
+.bairro-marker-wrapper.is-draggable-mode:active {
+  cursor: grabbing !important;
+}
+
+.bairro-marker-wrapper.is-draggable-mode .bairro-bubble {
+  border: 2px dashed #fbbf24 !important;
+  animation: editPulseGlow 1.8s infinite ease-in-out;
+}
+
+@keyframes editPulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 22px rgba(245, 158, 11, 0.95);
+  }
+}
+
+.bairro-marker-wrapper.is-draggable-mode .bairro-name-tag {
+  background: rgba(15, 23, 42, 0.95);
+  border-color: #f59e0b;
+  color: #fef08a;
+  font-weight: 700;
+}
+
+/* Edit Mode Bottom Dock */
+.map-edit-mode-dock {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 820px;
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  border-radius: 14px;
+  padding: 12px 18px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7), 0 0 24px rgba(245, 158, 11, 0.25);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: slideUpDock 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
+
+@keyframes slideUpDock {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.edit-dock-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.edit-dock-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.edit-dock-badge {
+  background: #f59e0b;
+  color: #0f172a;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.05em;
+}
+
+.edit-dock-hint {
+  font-size: 0.8rem;
+  color: #e2e8f0;
+}
+
+.edit-dock-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.76rem;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.edit-dock-status.is-idle {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.status-pin {
+  font-size: 0.9rem;
+}
+
+.status-name {
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.status-coords {
+  color: #cbd5e1;
+  font-family: monospace;
+}
+
+.status-saved {
+  margin-left: auto;
+  color: #34d399;
+  font-weight: 600;
+  font-size: 0.72rem;
+}
+
+.edit-dock-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-edit-action {
+  border: none;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-edit-action:hover {
+  transform: translateY(-1px);
+}
+
+.btn-edit-action.primary {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+}
+
+.btn-edit-action.primary:hover {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+}
+
+.btn-edit-action.secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-edit-action.secondary:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.btn-edit-action.warning {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.btn-edit-action.warning:hover {
+  background: rgba(239, 68, 68, 0.28);
+}
+
+.btn-edit-action.success {
+  background: #10b981;
+  color: #ffffff;
+  margin-left: auto;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.btn-edit-action.success:hover {
+  background: #059669;
+}
+
+/* Floating Feedback Toast */
+.map-feedback-toast {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 18px;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  z-index: 1200;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  animation: toastFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+@keyframes toastFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.map-feedback-toast.toast-success {
+  background: rgba(6, 78, 59, 0.95);
+  color: #6ee7b7;
+  border: 1px solid #10b981;
+}
+
+.map-feedback-toast.toast-info {
+  background: rgba(30, 58, 138, 0.95);
+  color: #93c5fd;
+  border: 1px solid #3b82f6;
+}
+
+.map-feedback-toast.toast-error {
+  background: rgba(136, 19, 55, 0.95);
+  color: #fda4af;
+  border: 1px solid #f43f5e;
+}
+
+@media (max-width: 860px) {
+  .map-edit-mode-dock {
+    bottom: 10px;
+    width: calc(100% - 16px);
+    padding: 10px 12px;
+  }
+  .edit-dock-actions {
+    gap: 6px;
+  }
+  .btn-edit-action {
+    padding: 6px 10px;
+    font-size: 0.74rem;
+  }
+  .btn-edit-action.success {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+

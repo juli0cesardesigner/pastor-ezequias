@@ -9,6 +9,7 @@ import { VisitasMapPage } from './pages/VisitasMap/VisitasMapPage';
 import { PrompterPage } from './pages/Prompter/PrompterPage';
 import { AgendaPage } from './pages/Agenda/AgendaPage';
 import { VideosPage } from './pages/Videos/VideosPage';
+import { ElectionMapPage } from './pages/ElectionMap/ElectionMapPage';
 import { useRoute } from './hooks/useRoute';
 import './App.css';
 
@@ -70,6 +71,10 @@ export const App: React.FC = () => {
         <Footer />
       </div>
     );
+  }
+
+  if (currentRoute === 'votos') {
+    return <ElectionMapPage onBackToHome={() => navigateTo('home')} />;
   }
 
   return (

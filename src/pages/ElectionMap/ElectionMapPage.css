@@ -1,0 +1,52 @@
+.election-page-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  width: 100%;
+  background: #0b1120;
+  color: #ffffff;
+  overflow: hidden;
+  font-family: inherit;
+}
+
+.election-page-workspace {
+  display: flex;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+}
+
+.election-drawer-area {
+  height: 100%;
+  z-index: 10;
+}
+
+.election-map-area {
+  flex: 1;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Mobile Tab Switcher Rules */
+@media (max-width: 860px) {
+  .election-page-workspace.show-tab-mapa .election-drawer-area {
+    display: none;
+  }
+
+  .election-page-workspace.show-tab-mapa .election-map-area {
+    display: block;
+    width: 100%;
+  }
+
+  .election-page-workspace.show-tab-ranking .election-map-area {
+    display: none;
+  }
+
+  .election-page-workspace.show-tab-ranking .election-drawer-area {
+    display: block;
+    width: 100%;
+  }
+}

@@ -52,6 +52,22 @@ function getRouteFromLocation(): PageRoute {
   ) {
     return 'videos';
   }
+  if (
+    path === '/votos' ||
+    path === '/votos/' ||
+    path.startsWith('/votos') ||
+    path === '/eleicoes' ||
+    path === '/eleicoes/' ||
+    path.startsWith('/eleicoes') ||
+    path === '/apuracao' ||
+    path === '/apuracao/' ||
+    path.startsWith('/apuracao') ||
+    hash === 'votos' ||
+    hash === 'eleicoes' ||
+    hash === 'apuracao'
+  ) {
+    return 'votos';
+  }
   if (path === '/apoio' || path === '/apoio/' || path.startsWith('/apoio') || hash === 'apoio') {
     return 'apoio';
   }

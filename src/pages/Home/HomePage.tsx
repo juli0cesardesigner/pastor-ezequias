@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Package, Film } from 'lucide-react';
+import { Camera, Package, Film, MapPin } from 'lucide-react';
 import { useRoute } from '../../hooks/useRoute';
 import { CAMPAIGN_CONFIG } from '../../config/campaign';
 import './HomePage.css';
@@ -75,6 +75,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
       type: 'internal',
       target: 'videos',
       icon: <Film size={20} />,
+    },
+    {
+      id: 'votos',
+      label: 'Mapa de Votação no ES (2026)',
+      type: 'internal',
+      target: 'votos',
+      icon: <MapPin size={20} />,
     },
     {
       id: 'whatsapp',
