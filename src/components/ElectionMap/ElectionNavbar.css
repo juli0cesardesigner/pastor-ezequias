@@ -99,20 +99,21 @@
 
 @media (max-width: 860px) {
   .election-navbar {
-    padding: 10px 12px;
+    padding: 6px 8px;
     flex-direction: column;
     justify-content: center;
-    gap: 10px;
+    gap: 6px;
   }
 
   .election-navbar-left {
     justify-content: center;
     width: 100%;
+    gap: 6px;
   }
 
   .stat-chip {
-    font-size: 0.78rem;
-    padding: 4px 10px;
+    font-size: 0.75rem;
+    padding: 4px 8px;
   }
 
   .election-mobile-tabs {

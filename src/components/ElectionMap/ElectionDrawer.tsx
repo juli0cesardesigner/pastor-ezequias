@@ -16,7 +16,6 @@ interface ElectionDrawerProps {
   onChangeFilter: (f: ElectionFilter) => void;
   searchTerm: string;
   onChangeSearch: (s: string) => void;
-  totalComVotos: number;
   totalColatinaVotos: number;
 }
 
@@ -31,7 +30,6 @@ export const ElectionDrawer: React.FC<ElectionDrawerProps> = ({
   onChangeFilter,
   searchTerm,
   onChangeSearch,
-  totalComVotos,
   totalColatinaVotos,
 }) => {
   const [sortBy, setSortBy] = useState<'votos' | 'nome'>('votos');
@@ -101,17 +99,10 @@ export const ElectionDrawer: React.FC<ElectionDrawerProps> = ({
         <div className="drawer-filter-row">
           <button
             type="button"
-            className={`filter-btn-chip ${filter === 'todos' ? 'active' : ''}`}
+            className={`filter-btn-chip ${filter !== 'bairros_colatina' ? 'active' : ''}`}
             onClick={() => onChangeFilter('todos')}
           >
-            Todos (78)
-          </button>
-          <button
-            type="button"
-            className={`filter-btn-chip ${filter === 'com_votos' ? 'active' : ''}`}
-            onClick={() => onChangeFilter('com_votos')}
-          >
-            🟢 Com Votos ({totalComVotos})
+            🗺️ Cidades ES ({municipios.length})
           </button>
           <button
             type="button"

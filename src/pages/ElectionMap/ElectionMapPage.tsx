@@ -82,7 +82,6 @@ export const ElectionMapPage: React.FC<ElectionMapPageProps> = () => {
             onChangeFilter={handleChangeFilter}
             searchTerm={searchTerm}
             onChangeSearch={setSearchTerm}
-            totalComVotos={electionData.totais.cidadesComVoto}
             totalColatinaVotos={COLATINA_TOTAL_VOTOS}
           />
         </div>

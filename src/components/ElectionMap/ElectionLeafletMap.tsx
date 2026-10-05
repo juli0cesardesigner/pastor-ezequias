@@ -21,6 +21,24 @@ interface ElectionLeafletMapProps {
 const ES_CENTER: L.LatLngExpression = [-19.65, -40.55];
 const COLATINA_COORDS: L.LatLngExpression = [-19.5392, -40.6308];
 
+const LIDERANCAS_POR_CIDADE: Record<string, string[]> = {
+  'Cariacica': ['Gustavo', 'Leide', 'Sula'],
+  'Itaguaçu': ['Mário João', 'Pr. Adalto'],
+  'Linhares': ['Erika'],
+  'Nova Venécia': ['Pr. Flavio'],
+  'Pinheiros': ['Ev. Adebio'],
+  'Ponto Belo': ['Pr. Elisnelson'],
+  'Rio Bananal': ['Douglas', 'Pr. Welington', 'Sidezandes', 'Lucas', 'Sizenandes', 'Pr. Luciano'],
+  'São Domingos do Norte': ['Pr. Reginaldo'],
+  'São Gabriel da Palha': ['Pr. Brás'],
+  'Vila Velha': ['Pedro', 'Pr. Aldemar', 'Pr. Flavio Coelho'],
+  'Vitória': ['Pr. Aquilino', 'Pr. Geziel'],
+  'São Roque do Canaã': ['Pr. Reuler'],
+  'Marilândia': ['Pr. Ariston e Irmã Josiane'],
+  'Jaguaré': ['Pr. Elcio'],
+  'Serra': ['Eliabe'],
+};
+
 type TileLayerKey = 'dark' | 'streets' | 'satellite';
 
 const TILE_LAYERS: Record<
@@ -192,6 +210,19 @@ function generateCityPopupHTML(municipio: MunicipioVoto): string {
             ? `
           <div style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.15); font-size: 0.73rem; color: #f59e0b; text-align: center; font-weight: 600;">
             🔍 Aproxime o zoom para ver a distribuição por bairros!
+          </div>
+        `
+            : ''
+        }
+        
+        ${
+          LIDERANCAS_POR_CIDADE[municipio.nome]
+            ? `
+          <div style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.15);">
+            <div style="font-size: 0.75rem; color: #cbd5e1; margin-bottom: 4px;">🤝 Lideranças / Contatos:</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+              ${LIDERANCAS_POR_CIDADE[municipio.nome].map(nome => `<span style="background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: #93c5fd; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem;">${nome}</span>`).join('')}
+            </div>
           </div>
         `
             : ''
