@@ -449,13 +449,14 @@ export const ElectionLeafletMap: React.FC<ElectionLeafletMapProps> = ({
     bairrosMarkersLayerRef.current = bairrosLayer;
     mapInstanceRef.current = map;
 
-    // Listener de zoom e movimento para detectar foco em Colatina
+    // Listener de zoom e movimento para detectar foco em Colatina (expande apenas com zoom bem próximo)
     const checkColatinaFocus = () => {
       const zoom = map.getZoom();
       const center = map.getCenter();
       // Distância em graus até o centro de Colatina (-19.5392, -40.6308)
+      // Reduzido para 0.08 para não pegar cidades vizinhas (Marilândia fica a ~0.15, São Roque a ~0.21)
       const dist = Math.hypot(center.lat - (-19.5392), center.lng - (-40.6308));
-      const shouldShowBairros = zoom >= 11 && dist < 0.45;
+      const shouldShowBairros = zoom >= 13 && dist < 0.08;
       setIsColatinaZoomed(shouldShowBairros);
     };
 
@@ -511,7 +512,7 @@ export const ElectionLeafletMap: React.FC<ElectionLeafletMapProps> = ({
   };
 
   const handleFlyToColatinaBairros = () => {
-    mapInstanceRef.current?.flyTo(COLATINA_COORDS, 13, { duration: 1.2 });
+    mapInstanceRef.current?.flyTo(COLATINA_COORDS, 13.5, { duration: 1.2 });
   };
 
   const handleToggleEditMode = () => {
@@ -618,7 +619,7 @@ export const ElectionLeafletMap: React.FC<ElectionLeafletMapProps> = ({
       marker.on('click', () => {
         onSelectCity(m);
         if (isColatina) {
-          mapInstanceRef.current?.flyTo(COLATINA_COORDS, 13, { duration: 1.2 });
+          mapInstanceRef.current?.flyTo(COLATINA_COORDS, 13.5, { duration: 1.2 });
         }
       });
 
@@ -721,7 +722,7 @@ export const ElectionLeafletMap: React.FC<ElectionLeafletMapProps> = ({
     if (!match) return;
 
     const isColatina = match.nome.toLowerCase() === 'colatina';
-    const targetZoom = isColatina ? 13 : Math.max(mapInstanceRef.current.getZoom(), 11);
+    const targetZoom = isColatina ? 13.5 : Math.max(mapInstanceRef.current.getZoom(), 11);
 
     mapInstanceRef.current.flyTo([match.lat, match.lng], targetZoom, {
       duration: 1.0,

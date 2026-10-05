@@ -37,12 +37,18 @@
   }
 
   .election-page-workspace.show-tab-mapa .election-map-area {
-    display: block;
+    visibility: visible;
+    position: relative;
+    z-index: 1;
     width: 100%;
   }
 
   .election-page-workspace.show-tab-ranking .election-map-area {
-    display: none;
+    visibility: hidden;
+    position: absolute;
+    z-index: -1;
+    width: 100%;
+    height: 100%;
   }
 
   .election-page-workspace.show-tab-ranking .election-drawer-area {
