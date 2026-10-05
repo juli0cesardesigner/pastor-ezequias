@@ -5,21 +5,15 @@ export const COLATINA_TOTAL_VOTOS = 2026;
 /**
  * Distribuição oficial e auditada dos 2.026 votos do Pastor Ezequias (Nº 15333)
  * em Colatina - ES (Eleições 2026).
- *
- * Coordenadas geográficas calibradas precisamente com base na malha urbana de Colatina:
- * - Margem Norte (Rio Doce): São Silvano, Santo Antônio, Santos Dumont, Bela Vista,
- *   Ayrton Senna, Carlos Germano Naumann, Lace, Maria das Graças, etc.
- * - Margem Sul (Rio Doce): Centro, Operários, Vila Lenira, Luiz Iglesias, Colatina Velha,
- *   Esplanada, Sagrado Coração de Jesus, etc.
- * - Distritos: Itapina, Baunilha, Boapaba, Ângelo Frechiani, Graça Aranha, etc.
+ * Coordenadas ajustadas e validadas interativamente no mapa.
  */
 export const COLATINA_BAIRROS: BairroVoto[] = [
   {
     "id": "sao_silvano",
     "nome": "São Silvano",
     "cidade": "Colatina",
-    "lat": -19.524,
-    "lng": -40.638,
+    "lat": -19.518903,
+    "lng": -40.641388,
     "votos": 198,
     "percentualCidade": 9.77,
     "principaisLocais": [
@@ -68,8 +62,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "centro",
     "nome": "Centro",
     "cidade": "Colatina",
-    "lat": -19.536,
-    "lng": -40.63,
+    "lat": -19.535303,
+    "lng": -40.628815,
     "votos": 154,
     "percentualCidade": 7.6,
     "principaisLocais": [
@@ -108,8 +102,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "bela_vista",
     "nome": "Bela Vista",
     "cidade": "Colatina",
-    "lat": -19.515,
-    "lng": -40.634,
+    "lat": -19.537789,
+    "lng": -40.62315,
     "votos": 131,
     "percentualCidade": 6.47,
     "principaisLocais": [
@@ -133,8 +127,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "ayrton_senna",
     "nome": "Ayrton Senna",
     "cidade": "Colatina",
-    "lat": -19.492,
-    "lng": -40.655,
+    "lat": -19.494912,
+    "lng": -40.656452,
     "votos": 116,
     "percentualCidade": 5.73,
     "principaisLocais": [
@@ -183,8 +177,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "sao_vicente",
     "nome": "São Vicente",
     "cidade": "Colatina",
-    "lat": -19.528,
-    "lng": -40.633,
+    "lat": -19.534635,
+    "lng": -40.621884,
     "votos": 100,
     "percentualCidade": 4.94,
     "principaisLocais": [
@@ -207,8 +201,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "morada_do_sol",
     "nome": "Morada do Sol",
     "cidade": "Colatina",
-    "lat": -19.514,
-    "lng": -40.658,
+    "lat": -19.522702,
+    "lng": -40.665765,
     "votos": 97,
     "percentualCidade": 4.79,
     "principaisLocais": [
@@ -232,8 +226,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "colatina_velha",
     "nome": "Colatina Velha",
     "cidade": "Colatina",
-    "lat": -19.539,
-    "lng": -40.648,
+    "lat": -19.531361,
+    "lng": -40.622596,
     "votos": 90,
     "percentualCidade": 4.44,
     "principaisLocais": [
@@ -256,8 +250,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "honorio_fraga",
     "nome": "Honório Fraga",
     "cidade": "Colatina",
-    "lat": -19.531,
-    "lng": -40.676,
+    "lat": -19.528084,
+    "lng": -40.666153,
     "votos": 86,
     "percentualCidade": 4.24,
     "principaisLocais": [
@@ -321,8 +315,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "lace",
     "nome": "Lace",
     "cidade": "Colatina",
-    "lat": -19.522,
-    "lng": -40.627,
+    "lat": -19.522865,
+    "lng": -40.631647,
     "votos": 70,
     "percentualCidade": 3.46,
     "principaisLocais": [
@@ -378,8 +372,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "moacir_brotas",
     "nome": "Moacir Brotas",
     "cidade": "Colatina",
-    "lat": -19.544,
-    "lng": -40.62,
+    "lat": -19.544665,
+    "lng": -40.626798,
     "votos": 66,
     "percentualCidade": 3.26,
     "principaisLocais": [
@@ -403,8 +397,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "carlos_germano_naumann",
     "nome": "Carlos Germano Naumann",
     "cidade": "Colatina",
-    "lat": -19.488,
-    "lng": -40.67,
+    "lat": -19.487835,
+    "lng": -40.671902,
     "votos": 64,
     "percentualCidade": 3.16,
     "principaisLocais": [
@@ -434,8 +428,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "vista_da_serra",
     "nome": "Vista da Serra",
     "cidade": "Colatina",
-    "lat": -19.5205,
-    "lng": -40.644,
+    "lat": -19.547473,
+    "lng": -40.621111,
     "votos": 60,
     "percentualCidade": 2.96,
     "principaisLocais": [
@@ -452,8 +446,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "barbados",
     "nome": "Barbados",
     "cidade": "Colatina",
-    "lat": -19.525,
-    "lng": -40.582,
+    "lat": -19.522259,
+    "lng": -40.575858,
     "votos": 52,
     "percentualCidade": 2.57,
     "principaisLocais": [
@@ -470,8 +464,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "santo_antonio",
     "nome": "Santo Antônio",
     "cidade": "Colatina",
-    "lat": -19.519,
-    "lng": -40.656,
+    "lat": -19.520661,
+    "lng": -40.653319,
     "votos": 51,
     "percentualCidade": 2.52,
     "principaisLocais": [
@@ -491,8 +485,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "15_de_outubro",
     "nome": "15 de Outubro",
     "cidade": "Colatina",
-    "lat": -19.505,
-    "lng": -40.65,
+    "lat": -19.452832,
+    "lng": -40.681071,
     "votos": 50,
     "percentualCidade": 2.47,
     "principaisLocais": [
@@ -510,8 +504,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "santa_teresinha",
     "nome": "Santa Teresinha",
     "cidade": "Colatina",
-    "lat": -19.546,
-    "lng": -40.639,
+    "lat": -19.551984,
+    "lng": -40.628922,
     "votos": 48,
     "percentualCidade": 2.37,
     "principaisLocais": [
@@ -535,8 +529,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "nossa_senhora_aparecida",
     "nome": "Nossa Senhora Aparecida",
     "cidade": "Colatina",
-    "lat": -19.518,
-    "lng": -40.63,
+    "lat": -19.524219,
+    "lng": -40.639563,
     "votos": 45,
     "percentualCidade": 2.22,
     "principaisLocais": [
@@ -561,8 +555,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "novo_horizonte",
     "nome": "Novo Horizonte",
     "cidade": "Colatina",
-    "lat": -19.511,
-    "lng": -40.64,
+    "lat": -19.525089,
+    "lng": -40.670056,
     "votos": 36,
     "percentualCidade": 1.78,
     "principaisLocais": [
@@ -581,8 +575,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "columbia",
     "nome": "Columbia",
     "cidade": "Colatina",
-    "lat": -19.525,
-    "lng": -40.711,
+    "lat": -19.523877,
+    "lng": -40.703682,
     "votos": 34,
     "percentualCidade": 1.68,
     "principaisLocais": [
@@ -606,8 +600,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "vila_lenira",
     "nome": "Vila Lenira",
     "cidade": "Colatina",
-    "lat": -19.552,
-    "lng": -40.633,
+    "lat": -19.551015,
+    "lng": -40.634265,
     "votos": 31,
     "percentualCidade": 1.53,
     "principaisLocais": [
@@ -653,8 +647,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "maria_ismenia",
     "nome": "Maria Ismênia",
     "cidade": "Colatina",
-    "lat": -19.545,
-    "lng": -40.631,
+    "lat": -19.54325,
+    "lng": -40.634737,
     "votos": 18,
     "percentualCidade": 0.89,
     "principaisLocais": [
@@ -732,8 +726,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "distrito_de_boapaba",
     "nome": "Distrito de Boapaba",
     "cidade": "Colatina",
-    "lat": -19.6386,
-    "lng": -40.6781,
+    "lat": -19.635475,
+    "lng": -40.618515,
     "votos": 14,
     "percentualCidade": 0.69,
     "principaisLocais": [
@@ -839,8 +833,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "patrimonio_de_sao_salvador",
     "nome": "Patrimônio de São Salvador",
     "cidade": "Colatina",
-    "lat": -19.4091,
-    "lng": -40.714,
+    "lat": -19.420294,
+    "lng": -40.717993,
     "votos": 7,
     "percentualCidade": 0.35,
     "principaisLocais": [
@@ -891,8 +885,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "distrito_de_paul_graca_aranha",
     "nome": "Distrito de Paul Graça Aranha",
     "cidade": "Colatina",
-    "lat": -19.3237,
-    "lng": -40.5971,
+    "lat": -19.317787,
+    "lng": -40.597358,
     "votos": 4,
     "percentualCidade": 0.2,
     "principaisLocais": [
@@ -909,8 +903,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "distrito_de_itapina",
     "nome": "Distrito de Itapina",
     "cidade": "Colatina",
-    "lat": -19.472,
-    "lng": -40.7193,
+    "lat": -19.497704,
+    "lng": -40.760565,
     "votos": 4,
     "percentualCidade": 0.2,
     "principaisLocais": [
@@ -977,8 +971,8 @@ export const COLATINA_BAIRROS: BairroVoto[] = [
     "id": "corrego_santana",
     "nome": "Córrego Santana",
     "cidade": "Colatina",
-    "lat": -19.5841,
-    "lng": -40.6158,
+    "lat": -19.591489,
+    "lng": -40.613065,
     "votos": 1,
     "percentualCidade": 0.05,
     "principaisLocais": [
