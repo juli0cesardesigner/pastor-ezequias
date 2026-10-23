@@ -23,6 +23,9 @@ function getRouteFromLocation(): PageRoute {
     return 'visitas';
   }
   if (
+    path === '/tp' ||
+    path === '/tp/' ||
+    path.startsWith('/tp') ||
     path === '/ppt' ||
     path === '/ppt/' ||
     path.startsWith('/ppt') ||
@@ -32,6 +35,7 @@ function getRouteFromLocation(): PageRoute {
     path === '/teleprompter' ||
     path === '/teleprompter/' ||
     path.startsWith('/teleprompter') ||
+    hash === 'tp' ||
     hash === 'ppt' ||
     hash === 'prompter' ||
     hash === 'teleprompter'

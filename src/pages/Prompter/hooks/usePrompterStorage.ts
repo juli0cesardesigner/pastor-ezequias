@@ -16,6 +16,8 @@ export interface PrompterSettings {
   textAlign: 'left' | 'center';
   mirrorHorizontal: boolean;
   forceLandscape: boolean; // girar 90 graus / modo paisagem em celulares
+  rotationAngle?: number; // ângulo de rotação (0, 45, 90, 135, 180, 225, 270, 315)
+  voiceTrackEnabled?: boolean; // rolagem guiada por voz (VoiceTrack / ASR)
 }
 
 const STORAGE_KEYS = {
@@ -33,6 +35,8 @@ const DEFAULT_SETTINGS: PrompterSettings = {
   textAlign: 'center',
   mirrorHorizontal: false,
   forceLandscape: false,
+  rotationAngle: 0,
+  voiceTrackEnabled: false,
 };
 
 export function usePrompterStorage() {

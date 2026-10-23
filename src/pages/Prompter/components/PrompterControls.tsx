@@ -16,6 +16,8 @@ import {
   Edit3,
   Check,
   Wifi,
+  Mic,
+  MicOff,
 } from 'lucide-react';
 import type { PrompterSettings } from '../hooks/usePrompterStorage';
 
@@ -37,6 +39,7 @@ interface PrompterControlsProps {
   isP2PConnected?: boolean;
   currentLine?: number;
   totalLines?: number;
+  isVoiceListening?: boolean;
 }
 
 export const PrompterControls: React.FC<PrompterControlsProps> = ({
@@ -50,11 +53,9 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
   isFullscreen,
   onToggleFullscreen,
   visible,
-  estimatedSpeechTime,
   onOpenP2PModal,
   isP2PConnected,
-  currentLine,
-  totalLines,
+  isVoiceListening,
 }) => {
   const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
 
@@ -74,27 +75,19 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
     onUpdateSetting('fontSize', Math.max(20, settings.fontSize - 1));
   };
 
-  const toggleLandscape = async () => {
-    const nextVal = !settings.forceLandscape;
-    onUpdateSetting('forceLandscape', nextVal);
+  const currentAngle = settings.rotationAngle !== undefined
+    ? settings.rotationAngle
+    : (settings.forceLandscape ? 90 : 0);
 
-    if (nextVal) {
+  const toggleLandscape = async () => {
+    const nextAngle = (currentAngle + 90) % 360;
+    onUpdateSetting('rotationAngle', nextAngle);
+    onUpdateSetting('forceLandscape', nextAngle === 90 || nextAngle === 270);
+
+    if (nextAngle !== 0) {
       try {
         if (!document.fullscreenElement) {
           await document.documentElement.requestFullscreen().catch(() => {});
-        }
-        // @ts-ignore
-        if (screen.orientation && typeof screen.orientation.lock === 'function') {
-          // @ts-ignore
-          await screen.orientation.lock('landscape').catch(() => {});
-        }
-      } catch {}
-    } else {
-      try {
-        // @ts-ignore
-        if (screen.orientation && typeof screen.orientation.unlock === 'function') {
-          // @ts-ignore
-          screen.orientation.unlock();
         }
       } catch {}
     }
@@ -128,20 +121,7 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
                 <span className="prompter-badge-time is-editing" title="Modo de edição direta ativo">
                   ✏️ Editando na Tela
                 </span>
-              ) : (
-                <div className="prompter-hud-status-badges">
-                  {totalLines && totalLines > 1 ? (
-                    <span className="prompter-badge-line" title="Linha ativa na roleta / Total de linhas">
-                      Linha {currentLine !== undefined ? currentLine + 1 : 1}/{totalLines}
-                    </span>
-                  ) : null}
-                  {estimatedSpeechTime ? (
-                    <span className="prompter-badge-time" title="Tempo estimado de fala">
-                      {estimatedSpeechTime}
-                    </span>
-                  ) : null}
-                </div>
-              )}
+              ) : null}
             </div>
 
             <div className="prompter-hud-actions-right">
@@ -158,15 +138,30 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
 
               <button
                 type="button"
-                className={`prompter-hud-btn icon-btn ${settings.forceLandscape ? 'active' : ''}`}
-                onClick={toggleLandscape}
+                className={`prompter-hud-btn icon-btn ${settings.voiceTrackEnabled ? 'active active-voice-btn' : ''}`}
+                onClick={() => onUpdateSetting('voiceTrackEnabled', !settings.voiceTrackEnabled)}
                 title={
-                  settings.forceLandscape
-                    ? 'Alternar para Modo Retrato / Vertical (O)'
-                    : 'Girar tela para Modo Paisagem / Landscape (O)'
+                  settings.voiceTrackEnabled
+                    ? isVoiceListening
+                      ? 'VoiceTrack Ativo (Ouvindo voz em tempo real)'
+                      : 'VoiceTrack Ativo'
+                    : 'Ativar VoiceTrack (Rolagem automática guiada por voz)'
                 }
               >
-                <RotateCw size={17} className={settings.forceLandscape ? 'rotate-icon-active' : ''} />
+                {settings.voiceTrackEnabled ? (
+                  <Mic size={17} className={isVoiceListening ? 'text-amber-300 animate-pulse' : ''} />
+                ) : (
+                  <MicOff size={17} />
+                )}
+              </button>
+
+              <button
+                type="button"
+                className={`prompter-hud-btn icon-btn ${currentAngle > 0 ? 'active' : ''}`}
+                onClick={toggleLandscape}
+                title={`Rotacionar tela (+90°) - Atual: ${currentAngle}°`}
+              >
+                <RotateCw size={17} className={currentAngle > 0 ? 'rotate-icon-active' : ''} />
               </button>
 
               <button
@@ -292,15 +287,30 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
 
             <button
               type="button"
-              className={`prompter-hud-circle-btn ${settings.forceLandscape ? 'active' : ''}`}
-              onClick={toggleLandscape}
+              className={`prompter-hud-circle-btn ${settings.voiceTrackEnabled ? 'active active-voice-btn' : ''}`}
+              onClick={() => onUpdateSetting('voiceTrackEnabled', !settings.voiceTrackEnabled)}
               title={
-                settings.forceLandscape
-                  ? 'Alternar para Modo Retrato / Vertical (O)'
-                  : 'Girar tela para Modo Paisagem / Landscape (O)'
+                settings.voiceTrackEnabled
+                  ? isVoiceListening
+                    ? 'VoiceTrack Ativo (Ouvindo voz em tempo real)'
+                    : 'VoiceTrack Ativo'
+                  : 'Ativar VoiceTrack (Rolagem automática guiada por voz)'
               }
             >
-              <RotateCw size={18} className={settings.forceLandscape ? 'rotate-icon-active' : ''} />
+              {settings.voiceTrackEnabled ? (
+                <Mic size={18} className={isVoiceListening ? 'text-amber-300 animate-pulse' : ''} />
+              ) : (
+                <MicOff size={18} />
+              )}
+            </button>
+
+            <button
+              type="button"
+              className={`prompter-hud-circle-btn ${currentAngle > 0 ? 'active' : ''}`}
+              onClick={toggleLandscape}
+              title={`Rotacionar tela (+90°) - Atual: ${currentAngle}°`}
+            >
+              <RotateCw size={18} className={currentAngle > 0 ? 'rotate-icon-active' : ''} />
             </button>
 
             <button
@@ -336,20 +346,7 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
               <span className="prompter-landscape-time-badge is-editing" title="Modo de edição direta ativo">
                 ✏️ Editando
               </span>
-            ) : (
-              <>
-                {totalLines && totalLines > 1 ? (
-                  <span className="prompter-landscape-line-badge" title="Linha ativa na roleta / Total de linhas">
-                    L {currentLine !== undefined ? currentLine + 1 : 1}/{totalLines}
-                  </span>
-                ) : null}
-                {estimatedSpeechTime ? (
-                  <span className="prompter-landscape-time-badge" title="Tempo estimado de fala">
-                    {estimatedSpeechTime}
-                  </span>
-                ) : null}
-              </>
-            )}
+            ) : null}
           </div>
 
           {/* Lado Direito: Stepper Velocidade + Stepper Fonte + Botão Play Amarelo */}
@@ -434,36 +431,39 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
             </div>
 
             <div className="drawer-content">
-              {/* Orientação da Tela (Modo Paisagem / Mobile) */}
+              {/* Orientação da Tela (Rotação de 45° em 45°) */}
               <div className="setting-control-row">
                 <div className="setting-label-row">
                   <span className="setting-title">
-                    <Smartphone size={16} /> Orientação da Tela (Mobile)
+                    <RotateCw size={16} /> Rotação da Tela
                   </span>
                   <span className="setting-value">
-                    {settings.forceLandscape ? 'Paisagem (90°)' : 'Retrato'}
+                    {currentAngle}°
                   </span>
                 </div>
                 <div className="orientation-presets-row">
                   <button
                     type="button"
-                    className={`orientation-btn ${!settings.forceLandscape ? 'active' : ''}`}
-                    onClick={() => onUpdateSetting('forceLandscape', false)}
+                    className={`orientation-btn ${currentAngle === 0 ? 'active' : ''}`}
+                    onClick={() => {
+                      onUpdateSetting('rotationAngle', 0);
+                      onUpdateSetting('forceLandscape', false);
+                    }}
                   >
                     <Smartphone size={16} />
-                    <span>Vertical (Retrato)</span>
+                    <span>0° (Padrão)</span>
                   </button>
                   <button
                     type="button"
-                    className={`orientation-btn ${settings.forceLandscape ? 'active' : ''}`}
-                    onClick={() => onUpdateSetting('forceLandscape', true)}
+                    className="orientation-btn"
+                    onClick={toggleLandscape}
                   >
                     <RotateCw size={16} />
-                    <span>Girar 90° (Paisagem / Tripé)</span>
+                    <span>Girar +45°</span>
                   </button>
                 </div>
                 <span className="setting-hint">
-                  Ideal para gravar na horizontal com tripé mesmo se o celular estiver com a rotação travada.
+                  Gira a tela de 45° em 45° para qualquer ângulo desejado em tripés ou suportes inclinados.
                 </span>
               </div>
 
@@ -602,6 +602,22 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
                     À Esquerda
                   </button>
                 </div>
+              </div>
+
+              {/* VoiceTrack / Rolagem por Voz (ASR) */}
+              <div className="setting-toggle-row">
+                <div>
+                  <span className="setting-title">🎤 VoiceTrack (Seguir Voz)</span>
+                  <p className="setting-desc">Avança o texto automaticamente conforme você fala</p>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={!!settings.voiceTrackEnabled}
+                    onChange={(e) => onUpdateSetting('voiceTrackEnabled', e.target.checked)}
+                  />
+                  <span className="toggle-slider" />
+                </label>
               </div>
 
               {/* Guia de leitura central */}

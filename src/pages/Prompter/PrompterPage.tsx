@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { usePrompterStorage } from './hooks/usePrompterStorage';
 import { useWakeLock } from './hooks/useWakeLock';
+import { useVoiceTrack } from './hooks/useVoiceTrack';
 import {
   fetchCloudScripts,
   saveCloudScript,
@@ -249,6 +250,10 @@ export const PrompterPage: React.FC = () => {
     if (scrollerRef.current) {
       scrollerRef.current.scrollTop = 0;
     }
+    // Iniciar automaticamente em tela cheia (fullscreen)
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
   }, [text]);
 
   // Concluir contagem regressiva
@@ -372,6 +377,21 @@ export const PrompterPage: React.FC = () => {
       return () => cancelAnimationFrame(id);
     }
   }, [mode, computeLinePositions]);
+
+  // Estado e integração da Rolagem Guiada por Voz (VoiceTrack / ASR)
+  const [isVoiceSpeaking, setIsVoiceSpeaking] = useState<boolean>(false);
+
+  const { isListening: isVoiceListening, lastHeardText } = useVoiceTrack({
+    enabled: mode === 'reading' && !showCountdown && !isInlineEditing && !!settings.voiceTrackEnabled,
+    scriptLines,
+    activeLineIndex,
+    onLineMatch: useCallback((lineIndex: number) => {
+      scrollToLine(lineIndex, true);
+    }, [scrollToLine]),
+    onSpeakingChange: useCallback((speaking: boolean) => {
+      setIsVoiceSpeaking(speaking);
+    }, []),
+  });
 
   // Auto-ajuste de posicionamento de acordo com o tamanho da fonte e largura, mantendo a linha ativa na mira
   useEffect(() => {
@@ -852,7 +872,10 @@ export const PrompterPage: React.FC = () => {
         handleRestart();
       } else if (e.key === 'o' || e.key === 'O') {
         e.preventDefault();
-        updateSetting('forceLandscape', !settings.forceLandscape);
+        const currentAngle = settings.rotationAngle !== undefined ? settings.rotationAngle : (settings.forceLandscape ? 90 : 0);
+        const nextAngle = (currentAngle + 90) % 360;
+        updateSetting('rotationAngle', nextAngle);
+        updateSetting('forceLandscape', nextAngle === 90 || nextAngle === 270);
         triggerControlsVisibility();
       } else if (e.key === 'f' || e.key === 'F') {
         e.preventDefault();
@@ -1552,7 +1575,7 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
       {/* ======================================================== */}
       {mode === 'reading' && (
         <div
-          className={`prompter-reading-screen ${settings.mirrorHorizontal ? 'is-mirrored' : ''} ${settings.forceLandscape ? 'force-landscape' : ''} ${isInlineEditing ? 'is-inline-editing-active' : ''}`}
+          className={`prompter-reading-screen ${settings.mirrorHorizontal ? 'is-mirrored' : ''} ${settings.forceLandscape ? 'force-landscape' : ''} ${settings.rotationAngle ? `rotate-${settings.rotationAngle}` : ''} ${isInlineEditing ? 'is-inline-editing-active' : ''}`}
           onClick={handleScreenClick}
           onMouseMove={triggerControlsVisibility}
           onTouchStart={handleTouchStart}
@@ -1565,6 +1588,16 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
             <div className="prompter-flash-floating-banner">
               <Bell size={22} className="shrink-0 animate-bounce text-amber-400" />
               <span>{flashAlertMessage}</span>
+            </div>
+          )}
+
+          {/* Indicador de Status do VoiceTrack */}
+          {settings.voiceTrackEnabled && !showCountdown && (
+            <div className={`prompter-voicetrack-indicator ${isVoiceSpeaking ? 'is-speaking' : ''}`}>
+              <span className="voicetrack-dot" />
+              <span className="voicetrack-label">
+                {isVoiceSpeaking ? `Ouvindo: "${lastHeardText.slice(-25)}"` : 'VoiceTrack Ativo (Aguardando fala)'}
+              </span>
             </div>
           )}
 
@@ -1707,6 +1740,7 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
               isP2PConnected={isP2PConnected}
               currentLine={activeLineIndex}
               totalLines={scriptLines.length}
+              isVoiceListening={isVoiceListening}
             />
           )}
         </div>
