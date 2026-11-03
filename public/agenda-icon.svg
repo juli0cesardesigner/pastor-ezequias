@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Fundo suave ciano/azul claro como na imagem -->
+  <rect width="512" height="512" rx="105" fill="#a4e4ec"/>
+
+  <!-- Alças escuras superiores (hastes do calendário) -->
+  <rect x="166" y="85" width="36" height="70" rx="18" fill="#333a42"/>
+  <rect x="310" y="85" width="36" height="70" rx="18" fill="#333a42"/>
+
+  <!-- Sombra inferior do bloco do calendário -->
+  <rect x="96" y="118" width="320" height="308" rx="55" fill="#c4ccd3"/>
+
+  <!-- Corpo branco do calendário -->
+  <rect x="96" y="118" width="320" height="296" rx="55" fill="#ffffff"/>
+
+  <!-- Cabeçalho vermelho do calendário cortado com clip-path -->
+  <g clip-path="url(#cal-header-clip)">
+    <rect x="96" y="118" width="320" height="106" fill="#f43e54"/>
+    <!-- Linha sutil de base do cabeçalho -->
+    <rect x="96" y="218" width="320" height="6" fill="#dc2638"/>
+  </g>
+
+  <!-- Partes superiores das alças que se sobrepõem ao vermelho -->
+  <rect x="166" y="85" width="36" height="70" rx="18" fill="#333a42"/>
+  <rect x="310" y="85" width="36" height="70" rx="18" fill="#333a42"/>
+
+  <defs>
+    <clipPath id="cal-header-clip">
+      <rect x="96" y="118" width="320" height="296" rx="55"/>
+    </clipPath>
+  </defs>
+</svg>

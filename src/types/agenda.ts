@@ -20,6 +20,8 @@ export interface AgendaEvent {
   updatedAt?: string;
 }
 
+export type AgendaRecurrence = 'none' | 'diariamente' | 'segunda_a_sexta' | 'semanal' | 'mensal' | 'anual';
+
 export interface AgendaEventInput {
   eventDate: string;
   eventTime: string;
@@ -29,7 +31,7 @@ export interface AgendaEventInput {
   status: AgendaStatus;
   priority: AgendaPriority;
   eventType?: AgendaEventType;
-  recurrence?: 'none' | 'semanal' | 'mensal' | 'anual';
+  recurrence?: AgendaRecurrence;
   recurrenceEndDate?: string; // Formato YYYY-MM-DD
   createdByName: string;
   createdByUserId?: number;

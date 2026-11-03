@@ -363,18 +363,35 @@ export async function createAgendaEvent(input: AgendaEventInput): Promise<Agenda
 
   if (recurrence !== 'none') {
     const endLimitDate = input.recurrenceEndDate;
-    // Default caps to avoid infinite loops: Weekly=3 years (~156), Monthly=5 years (60), Yearly=10 years (10)
-    let maxOccurrences = recurrence === 'semanal' ? 156 : recurrence === 'mensal' ? 60 : 10;
+    // Default caps: diariamente=365 dias, segunda a sexta=260 dias, semanal=156, mensal=60, anual=10
+    let maxOccurrences = 10;
+    if (recurrence === 'diariamente') maxOccurrences = 365;
+    else if (recurrence === 'segunda_a_sexta') maxOccurrences = 260;
+    else if (recurrence === 'semanal') maxOccurrences = 156;
+    else if (recurrence === 'mensal') maxOccurrences = 60;
+    else if (recurrence === 'anual') maxOccurrences = 10;
     
     let currentDate = input.eventDate;
-    for (let i = 1; i < maxOccurrences; i++) {
-      if (recurrence === 'semanal') currentDate = addDays(currentDate, 7);
-      else if (recurrence === 'mensal') currentDate = addMonths(currentDate, 1);
-      else if (recurrence === 'anual') currentDate = addYears(currentDate, 1);
+    let added = 1;
+    while (added < maxOccurrences) {
+      if (recurrence === 'diariamente') {
+        currentDate = addDays(currentDate, 1);
+      } else if (recurrence === 'segunda_a_sexta') {
+        currentDate = addDays(currentDate, 1);
+        const dayOfWeek = new Date(`${currentDate}T12:00:00`).getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) continue; // pula sábado e domingo
+      } else if (recurrence === 'semanal') {
+        currentDate = addDays(currentDate, 7);
+      } else if (recurrence === 'mensal') {
+        currentDate = addMonths(currentDate, 1);
+      } else if (recurrence === 'anual') {
+        currentDate = addYears(currentDate, 1);
+      }
 
       if (endLimitDate && currentDate > endLimitDate) break;
       
       datesToInsert.push(currentDate);
+      added++;
     }
   }
 

@@ -2356,13 +2356,13 @@
 }
 
 .ios-wheel-column.wide .ios-wheel-item {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   padding: 0 8px;
   white-space: nowrap;
 }
 
 .ios-wheel-column.wide .ios-wheel-item.selected {
-  font-size: 1.35rem;
+  font-size: 1.25rem;
 }
 
 

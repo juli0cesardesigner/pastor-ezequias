@@ -8,6 +8,8 @@ import type {
 } from '../../../types/agenda';
 import { InlineMonthCalendar } from './InlineMonthCalendar';
 import { DateTextInput } from './DateTextInput';
+import { IosSinglePickerModal } from './IosTimePickerModal';
+import type { AgendaRecurrence } from '../../../types/agenda';
 
 interface AgendaImportantDateModalProps {
   isOpen: boolean;
@@ -28,6 +30,32 @@ export const AgendaImportantDateModal: React.FC<AgendaImportantDateModalProps> =
   defaultDate,
   dayEventsMap = {},
 }) => {
+  const recurrenceOptions: { label: string; value: AgendaRecurrence }[] = [
+    { label: 'Diariamente', value: 'diariamente' },
+    { label: 'Segunda a sexta', value: 'segunda_a_sexta' },
+    { label: 'Semanal', value: 'semanal' },
+    { label: 'Mensal', value: 'mensal' },
+    { label: 'Anual', value: 'anual' },
+  ];
+
+  const reminderOptions: string[] = [
+    'Na hora',
+    '5 min antes',
+    '10 min antes',
+    '15 min antes',
+    '1h antes',
+    '2h antes',
+    '1 dia antes',
+    '2 dias antes',
+    '1 semana antes',
+    '2 semanas antes',
+  ];
+
+  const getRecurrenceLabel = (val: AgendaRecurrence) => {
+    const found = recurrenceOptions.find((opt) => opt.value === val);
+    return found ? found.label : 'Anual';
+  };
+
   const getTodayString = () => {
     const d = new Date();
     const year = d.getFullYear();
@@ -47,11 +75,13 @@ export const AgendaImportantDateModal: React.FC<AgendaImportantDateModalProps> =
 
   // 4. Toggle Recorrência
   const [enableRecurrence, setEnableRecurrence] = useState(true);
-  const [recurrence, setRecurrence] = useState<'none' | 'anual' | 'mensal'>('anual');
+  const [recurrence, setRecurrence] = useState<AgendaRecurrence>('anual');
+  const [isRecurrencePickerOpen, setIsRecurrencePickerOpen] = useState(false);
 
-  // 4. Toggle Lembrete
+  // 5. Toggle Lembrete
   const [enableReminder, setEnableReminder] = useState(false);
-  const [reminderDays, setReminderDays] = useState<number>(1);
+  const [reminderLabel, setReminderLabel] = useState('1 dia antes');
+  const [isReminderPickerOpen, setIsReminderPickerOpen] = useState(false);
 
   // 5. Toggle Detalhes
   const [enableDetails, setEnableDetails] = useState(false);
@@ -71,6 +101,12 @@ export const AgendaImportantDateModal: React.FC<AgendaImportantDateModalProps> =
       setRecurrence('anual');
       const hasReminderNote = editingEvent.notes && editingEvent.notes.includes('[Aviso:');
       setEnableReminder(Boolean(hasReminderNote));
+      if (hasReminderNote) {
+        const match = editingEvent.notes.match(/\[Aviso:\s*(.*?)\]/);
+        if (match && match[1]) {
+          setReminderLabel(match[1].trim());
+        }
+      }
     } else {
       setTitle('');
       setDate(defaultDate || getTodayString());
@@ -80,7 +116,7 @@ export const AgendaImportantDateModal: React.FC<AgendaImportantDateModalProps> =
       setEnableRecurrence(true);
       setRecurrence('anual');
       setEnableReminder(false);
-      setReminderDays(1);
+      setReminderLabel('1 dia antes');
     }
     setErrorMsg(null);
   }, [editingEvent, defaultDate, isOpen]);
@@ -102,8 +138,8 @@ export const AgendaImportantDateModal: React.FC<AgendaImportantDateModalProps> =
     setErrorMsg(null);
 
     try {
-      const finalNotes = enableReminder && reminderDays > 0
-        ? `${notes.trim() ? notes.trim() + '\n' : ''}[Aviso: ${reminderDays} dia(s) antes]`
+      const finalNotes = enableReminder && reminderLabel
+        ? `${notes.trim() ? notes.trim() + '\n' : ''}[Aviso: ${reminderLabel}]`
         : notes.trim();
 
       const input: AgendaEventInput = {
@@ -111,7 +147,7 @@ export const AgendaImportantDateModal: React.FC<AgendaImportantDateModalProps> =
         eventTime: 'Dia Todo',
         title: title.trim(),
         location: '',
-        notes: enableDetails ? finalNotes : (enableReminder ? `[Aviso: ${reminderDays} dia(s) antes]` : ''),
+        notes: enableDetails ? finalNotes : (enableReminder ? `[Aviso: ${reminderLabel}]` : ''),
         status: 'confirmado',
         priority: priority,
         eventType: 'data_importante',
@@ -203,7 +239,7 @@ export const AgendaImportantDateModal: React.FC<AgendaImportantDateModalProps> =
             </div>
           </div>
 
-          {/* 4. [ ] RECORRÊNCIA - TOGGLE AUTOATIVÁVEL */}
+          {/* 4. [ ] RECORRÊNCIA - TOGGLE AUTOATIVÁVEL COM IOS WHEEL DRUM */}
           {!editingEvent && (
             <div className="agenda-toggle-block">
               <label className="agenda-toggle-trigger">
@@ -217,20 +253,20 @@ export const AgendaImportantDateModal: React.FC<AgendaImportantDateModalProps> =
 
               {enableRecurrence && (
                 <div className="toggle-sub-content">
-                  <select
-                    value={recurrence}
-                    onChange={(e) => setRecurrence(e.target.value as any)}
-                    className="agenda-clean-input"
+                  <button
+                    type="button"
+                    className="agenda-clean-input time-picker-trigger-btn flex items-center justify-between"
+                    onClick={() => setIsRecurrencePickerOpen(true)}
                   >
-                    <option value="anual">Todo ano (Anual)</option>
-                    <option value="mensal">Todo mês (Mensal)</option>
-                  </select>
+                    <span>{getRecurrenceLabel(recurrence)}</span>
+                    <span style={{ fontSize: '0.8rem', color: '#60a5fa' }}>Alterar</span>
+                  </button>
                 </div>
               )}
             </div>
           )}
 
-          {/* 5. [ ] LEMBRETE - TOGGLE AUTOATIVÁVEL */}
+          {/* 5. [ ] LEMBRETE - TOGGLE AUTOATIVÁVEL COM IOS WHEEL DRUM */}
           <div className="agenda-toggle-block">
             <label className="agenda-toggle-trigger">
               <input
@@ -243,16 +279,14 @@ export const AgendaImportantDateModal: React.FC<AgendaImportantDateModalProps> =
 
             {enableReminder && (
               <div className="toggle-sub-content">
-                <select
-                  value={reminderDays}
-                  onChange={(e) => setReminderDays(Number(e.target.value))}
-                  className="agenda-clean-input"
+                <button
+                  type="button"
+                  className="agenda-clean-input time-picker-trigger-btn flex items-center justify-between"
+                  onClick={() => setIsReminderPickerOpen(true)}
                 >
-                  <option value={1}>1 dia antes</option>
-                  <option value={0}>No próprio dia</option>
-                  <option value={3}>3 dias antes</option>
-                  <option value={7}>1 semana antes</option>
-                </select>
+                  <span>{reminderLabel}</span>
+                  <span style={{ fontSize: '0.8rem', color: '#60a5fa' }}>Alterar</span>
+                </button>
               </div>
             )}
           </div>
@@ -304,6 +338,30 @@ export const AgendaImportantDateModal: React.FC<AgendaImportantDateModalProps> =
             </button>
           </div>
         </form>
+        {/* Seletor Estilo iPhone Wheel Drum para Recorrência */}
+        <IosSinglePickerModal
+          isOpen={isRecurrencePickerOpen}
+          title="Recorrência"
+          items={recurrenceOptions.map((o) => o.label)}
+          value={getRecurrenceLabel(recurrence)}
+          onChange={(lbl) => {
+            const found = recurrenceOptions.find((o) => o.label === lbl);
+            if (found) setRecurrence(found.value);
+          }}
+          onClose={() => setIsRecurrencePickerOpen(false)}
+          loop={true}
+        />
+
+        {/* Seletor Estilo iPhone Wheel Drum para Lembrete */}
+        <IosSinglePickerModal
+          isOpen={isReminderPickerOpen}
+          title="Lembrete"
+          items={reminderOptions}
+          value={reminderLabel}
+          onChange={(val) => setReminderLabel(val)}
+          onClose={() => setIsReminderPickerOpen(false)}
+          loop={true}
+        />
       </div>
     </div>
   );

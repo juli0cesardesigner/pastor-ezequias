@@ -7,7 +7,8 @@ import type {
 } from '../../../types/agenda';
 import { InlineMonthCalendar } from './InlineMonthCalendar';
 import { DateTextInput } from './DateTextInput';
-import { IosTimePickerModal } from './IosTimePickerModal';
+import { IosTimePickerModal, IosSinglePickerModal } from './IosTimePickerModal';
+import type { AgendaRecurrence } from '../../../types/agenda';
 
 interface AgendaModalProps {
   isOpen: boolean;
@@ -28,6 +29,32 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({
   defaultDate,
   dayEventsMap = {},
 }) => {
+  const recurrenceOptions: { label: string; value: AgendaRecurrence }[] = [
+    { label: 'Diariamente', value: 'diariamente' },
+    { label: 'Segunda a sexta', value: 'segunda_a_sexta' },
+    { label: 'Semanal', value: 'semanal' },
+    { label: 'Mensal', value: 'mensal' },
+    { label: 'Anual', value: 'anual' },
+  ];
+
+  const reminderOptions: string[] = [
+    'Na hora',
+    '5 min antes',
+    '10 min antes',
+    '15 min antes',
+    '1h antes',
+    '2h antes',
+    '1 dia antes',
+    '2 dias antes',
+    '1 semana antes',
+    '2 semanas antes',
+  ];
+
+  const getRecurrenceLabel = (val: AgendaRecurrence) => {
+    const found = recurrenceOptions.find((opt) => opt.value === val);
+    return found ? found.label : 'Semanal';
+  };
+
   const getTodayString = () => {
     const d = new Date();
     const year = d.getFullYear();
@@ -48,11 +75,13 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({
 
   // 4. Toggle Recorrência
   const [enableRecurrence, setEnableRecurrence] = useState(false);
-  const [recurrence, setRecurrence] = useState<'none' | 'semanal' | 'mensal' | 'anual'>('semanal');
+  const [recurrence, setRecurrence] = useState<AgendaRecurrence>('semanal');
+  const [isRecurrencePickerOpen, setIsRecurrencePickerOpen] = useState(false);
 
   // 5. Toggle Lembrete
   const [enableReminder, setEnableReminder] = useState(false);
-  const [reminderMinutes, setReminderMinutes] = useState<number>(30);
+  const [reminderLabel, setReminderLabel] = useState('15 min antes');
+  const [isReminderPickerOpen, setIsReminderPickerOpen] = useState(false);
 
   // 6. Toggle Detalhes (Local + Anotações)
   const [enableDetails, setEnableDetails] = useState(false);
@@ -78,6 +107,12 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({
 
       const hasReminderNote = editingEvent.notes && editingEvent.notes.includes('[Lembrete:');
       setEnableReminder(Boolean(hasReminderNote));
+      if (hasReminderNote) {
+        const match = editingEvent.notes.match(/\[Lembrete:\s*(.*?)\]/);
+        if (match && match[1]) {
+          setReminderLabel(match[1].trim());
+        }
+      }
     } else {
       setTitle('');
       setDate(defaultDate || getTodayString());
@@ -87,7 +122,7 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({
       setEnableRecurrence(false);
       setRecurrence('semanal');
       setEnableReminder(false);
-      setReminderMinutes(30);
+      setReminderLabel('15 min antes');
       setEnableDetails(false);
     }
     setErrorMsg(null);
@@ -110,8 +145,8 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({
     setErrorMsg(null);
 
     try {
-      const finalNotes = enableReminder && reminderMinutes > 0
-        ? `${notes.trim() ? notes.trim() + '\n' : ''}[Lembrete: ${reminderMinutes} min antes]`
+      const finalNotes = enableReminder && reminderLabel
+        ? `${notes.trim() ? notes.trim() + '\n' : ''}[Lembrete: ${reminderLabel}]`
         : notes.trim();
 
       const input: AgendaEventInput = {
@@ -119,7 +154,7 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({
         eventTime: time,
         title: title.trim(),
         location: enableDetails ? location.trim() : '',
-        notes: enableDetails ? finalNotes : (enableReminder ? `[Lembrete: ${reminderMinutes} min antes]` : ''),
+        notes: enableDetails ? finalNotes : (enableReminder ? `[Lembrete: ${reminderLabel}]` : ''),
         status: 'pendente',
         priority: 'media',
         eventType: 'compromisso',
@@ -187,7 +222,7 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({
             </div>
           </div>
 
-          {/* 4. [ ] RECORRÊNCIA - TOGGLE AUTOATIVÁVEL */}
+          {/* 4. [ ] RECORRÊNCIA - TOGGLE AUTOATIVÁVEL COM IOS WHEEL DRUM */}
           {!editingEvent && (
             <div className="agenda-toggle-block">
               <label className="agenda-toggle-trigger">
@@ -201,21 +236,20 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({
 
               {enableRecurrence && (
                 <div className="toggle-sub-content">
-                  <select
-                    value={recurrence}
-                    onChange={(e) => setRecurrence(e.target.value as any)}
-                    className="agenda-clean-input"
+                  <button
+                    type="button"
+                    className="agenda-clean-input time-picker-trigger-btn flex items-center justify-between"
+                    onClick={() => setIsRecurrencePickerOpen(true)}
                   >
-                    <option value="semanal">Semanal</option>
-                    <option value="mensal">Mensal</option>
-                    <option value="anual">Anual</option>
-                  </select>
+                    <span>{getRecurrenceLabel(recurrence)}</span>
+                    <span style={{ fontSize: '0.8rem', color: '#60a5fa' }}>Alterar</span>
+                  </button>
                 </div>
               )}
             </div>
           )}
 
-          {/* 5. [ ] LEMBRETE - TOGGLE AUTOATIVÁVEL */}
+          {/* 5. [ ] LEMBRETE - TOGGLE AUTOATIVÁVEL COM IOS WHEEL DRUM */}
           <div className="agenda-toggle-block">
             <label className="agenda-toggle-trigger">
               <input
@@ -228,18 +262,14 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({
 
             {enableReminder && (
               <div className="toggle-sub-content">
-                <select
-                  value={reminderMinutes}
-                  onChange={(e) => setReminderMinutes(Number(e.target.value))}
-                  className="agenda-clean-input"
+                <button
+                  type="button"
+                  className="agenda-clean-input time-picker-trigger-btn flex items-center justify-between"
+                  onClick={() => setIsReminderPickerOpen(true)}
                 >
-                  <option value={0}>No momento</option>
-                  <option value={15}>15 minutos antes</option>
-                  <option value={30}>30 minutos antes</option>
-                  <option value={60}>1 hora antes</option>
-                  <option value={120}>2 horas antes</option>
-                  <option value={1440}>1 dia antes</option>
-                </select>
+                  <span>{reminderLabel}</span>
+                  <span style={{ fontSize: '0.8rem', color: '#60a5fa' }}>Alterar</span>
+                </button>
               </div>
             )}
           </div>
@@ -305,6 +335,31 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({
           value={time}
           onChange={(newTime) => setTime(newTime)}
           onClose={() => setIsTimePickerOpen(false)}
+        />
+
+        {/* Seletor Estilo iPhone Wheel Drum para Recorrência */}
+        <IosSinglePickerModal
+          isOpen={isRecurrencePickerOpen}
+          title="Recorrência"
+          items={recurrenceOptions.map((o) => o.label)}
+          value={getRecurrenceLabel(recurrence)}
+          onChange={(lbl) => {
+            const found = recurrenceOptions.find((o) => o.label === lbl);
+            if (found) setRecurrence(found.value);
+          }}
+          onClose={() => setIsRecurrencePickerOpen(false)}
+          loop={true}
+        />
+
+        {/* Seletor Estilo iPhone Wheel Drum para Lembrete */}
+        <IosSinglePickerModal
+          isOpen={isReminderPickerOpen}
+          title="Lembrete"
+          items={reminderOptions}
+          value={reminderLabel}
+          onChange={(val) => setReminderLabel(val)}
+          onClose={() => setIsReminderPickerOpen(false)}
+          loop={true}
         />
       </div>
     </div>
