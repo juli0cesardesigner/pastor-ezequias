@@ -1,0 +1,26 @@
+{
+  "name": "Agenda - Pastor Ezequias",
+  "short_name": "Agenda",
+  "description": "Agenda oficial de compromissos e datas importantes do Pastor Ezequias",
+  "start_url": "/?page=agenda",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b1329",
+  "theme_color": "#0d1b3e",
+  "icons": [
+    {
+      "src": "/foto.webp",
+      "sizes": "192x192",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/foto.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    }
+  ]
+}
+

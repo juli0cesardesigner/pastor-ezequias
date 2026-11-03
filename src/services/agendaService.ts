@@ -60,6 +60,20 @@ export async function ensureAgendaTables(): Promise<void> {
       ADD COLUMN IF NOT EXISTS event_type VARCHAR(50) NOT NULL DEFAULT 'compromisso';
     `;
 
+    // Garante a existência da tabela para salvar inscrições de Web Push
+    await sql`
+      CREATE TABLE IF NOT EXISTS campaign_agenda_push_subscriptions (
+        id SERIAL PRIMARY KEY,
+        user_id INT,
+        endpoint TEXT UNIQUE NOT NULL,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        user_agent TEXT DEFAULT '',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
     // 3. Verifica se existe pelo menos um usuário. Se não houver, insere o usuário padrão de coordenação
     const existingUsers = await sql`SELECT id FROM campaign_agenda_users LIMIT 1;`;
     if (existingUsers.length === 0) {
@@ -512,3 +526,40 @@ export async function deleteAgendaEvent(id: number): Promise<void> {
   const updated = current.filter((e) => e.id !== id);
   setLocalAgendaEventsCache(updated);
 }
+
+/**
+ * Salva a inscrição do Web Push (PushSubscription) no Neon DB
+ */
+export async function savePushSubscription(
+  userId: number | undefined,
+  subscription: PushSubscription
+): Promise<boolean> {
+  try {
+    await ensureAgendaTables();
+    const subJson = subscription.toJSON();
+    const endpoint = subJson.endpoint;
+    const p256dh = subJson.keys?.p256dh || '';
+    const auth = subJson.keys?.auth || '';
+    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+
+    if (!endpoint || !p256dh || !auth) {
+      return false;
+    }
+
+    await sql`
+      INSERT INTO campaign_agenda_push_subscriptions (user_id, endpoint, p256dh, auth, user_agent, updated_at)
+      VALUES (${userId || null}, ${endpoint}, ${p256dh}, ${auth}, ${userAgent}, CURRENT_TIMESTAMP)
+      ON CONFLICT (endpoint) DO UPDATE
+      SET user_id = EXCLUDED.user_id,
+          p256dh = EXCLUDED.p256dh,
+          auth = EXCLUDED.auth,
+          user_agent = EXCLUDED.user_agent,
+          updated_at = CURRENT_TIMESTAMP;
+    `;
+    return true;
+  } catch (err) {
+    console.error('Erro ao salvar PushSubscription no Neon DB:', err);
+    return false;
+  }
+}
+

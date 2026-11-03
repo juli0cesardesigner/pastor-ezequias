@@ -18,6 +18,7 @@ import {
   Wifi,
   Mic,
   MicOff,
+  Bluetooth,
 } from 'lucide-react';
 import type { PrompterSettings } from '../hooks/usePrompterStorage';
 
@@ -37,6 +38,8 @@ interface PrompterControlsProps {
   estimatedSpeechTime?: string;
   onOpenP2PModal?: () => void;
   isP2PConnected?: boolean;
+  onOpenRemoteModal?: () => void;
+  isRemoteConnected?: boolean;
   currentLine?: number;
   totalLines?: number;
   isVoiceListening?: boolean;
@@ -55,6 +58,8 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
   visible,
   onOpenP2PModal,
   isP2PConnected,
+  onOpenRemoteModal,
+  isRemoteConnected,
   isVoiceListening,
 }) => {
   const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
@@ -181,6 +186,17 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
                   title={isP2PConnected ? 'Operador Conectado (P2P)' : 'Parear com Notebook Operador'}
                 >
                   <Wifi size={17} className={isP2PConnected ? 'text-emerald-400' : ''} />
+                </button>
+              )}
+
+              {onOpenRemoteModal && (
+                <button
+                  type="button"
+                  className={`prompter-hud-btn icon-btn ${isRemoteConnected ? 'active' : ''}`}
+                  onClick={onOpenRemoteModal}
+                  title={isRemoteConnected ? 'Controle FEELWORLD Conectado' : 'Diagnóstico / Controle Remoto BLE'}
+                >
+                  <Bluetooth size={17} className={isRemoteConnected ? 'text-cyan-400' : ''} />
                 </button>
               )}
 
@@ -330,6 +346,17 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
                 title={isP2PConnected ? 'Operador Conectado (P2P)' : 'Parear com Notebook Operador'}
               >
                 <Wifi size={18} className={isP2PConnected ? 'text-emerald-400' : ''} />
+              </button>
+            )}
+
+            {onOpenRemoteModal && (
+              <button
+                type="button"
+                className={`prompter-hud-circle-btn ${isRemoteConnected ? 'active' : ''}`}
+                onClick={onOpenRemoteModal}
+                title={isRemoteConnected ? 'Controle FEELWORLD Conectado' : 'Diagnóstico / Controle Remoto BLE'}
+              >
+                <Bluetooth size={18} className={isRemoteConnected ? 'text-cyan-400' : ''} />
               </button>
             )}
 

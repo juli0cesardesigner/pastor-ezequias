@@ -18,6 +18,7 @@ import {
   Wifi,
   Laptop,
   Bell,
+  Bluetooth,
 } from 'lucide-react';
 import { usePrompterStorage } from './hooks/usePrompterStorage';
 import { useWakeLock } from './hooks/useWakeLock';
@@ -31,8 +32,10 @@ import {
 import { PrompterControls } from './components/PrompterControls';
 import { PrompterCountdown } from './components/PrompterCountdown';
 import { PrompterP2PModal } from './components/PrompterP2PModal';
+import { PrompterRemoteModal } from './components/PrompterRemoteModal';
 import { PrompterOperatorDeck } from './components/PrompterOperatorDeck';
 import { p2pManager, type P2PMessage } from '../../services/prompterP2PService';
+import { feelworldBle, type RemoteActionType } from '../../services/feelworldBleService';
 import './PrompterPage.css';
 
 const SCRIPT_CATEGORIES = [
@@ -145,6 +148,10 @@ export const PrompterPage: React.FC = () => {
   const [flashAlertMessage, setFlashAlertMessage] = useState<string | null>(null);
   const flashTimeoutRef = useRef<number | null>(null);
 
+  // Modal de Diagnóstico / Controle Remoto FEELWORLD
+  const [showRemoteModal, setShowRemoteModal] = useState<boolean>(false);
+  const [isRemoteConnected, setIsRemoteConnected] = useState<boolean>(() => feelworldBle.isConnected());
+
   // Iniciar como Host quando o modal for aberto
   const handleStartHosting = useCallback(async (): Promise<string> => {
     const code = await p2pManager.startHost(p2pRoomCode || undefined);
@@ -250,6 +257,10 @@ export const PrompterPage: React.FC = () => {
     if (scrollerRef.current) {
       scrollerRef.current.scrollTop = 0;
     }
+    // Tentar reconectar o controle silenciosamente em background se estiver desconectado
+    if (!feelworldBle.isConnected()) {
+      feelworldBle.tryAutoConnectSilently().catch(() => {});
+    }
     // Iniciar automaticamente em tela cheia (fullscreen)
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
@@ -350,8 +361,10 @@ export const PrompterPage: React.FC = () => {
     activeLineIndexRef.current = clamped;
     setActiveLineIndex(clamped);
     currentScrollRef.current = targetScrollTop;
+    lastTimeRef.current = null;
 
-    if (smooth) {
+    // Se estiver em reprodução contínua (Play ativo), aplicar sem smooth para não brigar com o animationFrame de 60fps
+    if (smooth && !isPlaying) {
       scrollerRef.current.scrollTo({
         top: targetScrollTop,
         behavior: 'smooth',
@@ -905,6 +918,93 @@ export const PrompterPage: React.FC = () => {
     scrollToLine,
   ]);
 
+  // Listener de Ações do Controle Remoto Bluetooth FEELWORLD TP2A
+  useEffect(() => {
+    // Tentar reconectar silenciosamente ao abrir a página se já houve pareamento anterior
+    if (!feelworldBle.isConnected()) {
+      feelworldBle.tryAutoConnectSilently().catch(() => {});
+    }
+
+    const unsubConn = feelworldBle.onConnectionChange((connected) => {
+      setIsRemoteConnected(connected);
+    });
+
+    const unsubAction = feelworldBle.onAction((action: RemoteActionType) => {
+      // Se estiver no editor e apertar Play/Pause (OK), inicia a leitura
+      if (mode === 'editor') {
+        if (action === 'PLAY_PAUSE') {
+          handleStartReading();
+        }
+        return;
+      }
+
+      // Ações no Modo Leitura
+      if (mode === 'reading') {
+        switch (action) {
+          case 'PLAY_PAUSE': {
+            togglePlay();
+            break;
+          }
+          case 'SPEED_UP': {
+            updateSetting('speed', Math.min(100, settings.speed + 1));
+            triggerControlsVisibility();
+            break;
+          }
+          case 'SPEED_DOWN': {
+            updateSetting('speed', Math.max(1, settings.speed - 1));
+            triggerControlsVisibility();
+            break;
+          }
+          case 'FONT_UP': {
+            updateSetting('fontSize', Math.min(130, settings.fontSize + 1));
+            triggerControlsVisibility();
+            break;
+          }
+          case 'FONT_DOWN': {
+            updateSetting('fontSize', Math.max(20, settings.fontSize - 1));
+            triggerControlsVisibility();
+            break;
+          }
+          case 'RESTART': {
+            handleRestart();
+            triggerControlsVisibility();
+            break;
+          }
+          case 'BACK_TO_EDITOR': {
+            handleBackToEdit();
+            break;
+          }
+          case 'PREV_LINE': {
+            scrollToLine(activeLineIndexRef.current - 1, true);
+            triggerControlsVisibility();
+            break;
+          }
+          case 'NEXT_LINE': {
+            scrollToLine(activeLineIndexRef.current + 1, true);
+            triggerControlsVisibility();
+            break;
+          }
+        }
+      }
+    });
+
+    return () => {
+      unsubConn();
+      unsubAction();
+    };
+  }, [
+    mode,
+    settings.speed,
+    settings.fontSize,
+    handleStartReading,
+    togglePlay,
+    updateSetting,
+    triggerControlsVisibility,
+    handleRestart,
+    handleBackToEdit,
+    scrollToLine,
+  ]);
+
   // Sincronizar bloqueio de orientação de tela do dispositivo quando suportado
   useEffect(() => {
     if (mode === 'reading' && settings.forceLandscape) {
@@ -1098,6 +1198,16 @@ export const PrompterPage: React.FC = () => {
                 >
                   <Wifi size={13} className={isP2PConnected ? 'text-emerald-400' : 'text-amber'} />
                   <span>{isP2PConnected ? 'Operador Ativo' : 'Parear Operador'}</span>
+                </button>
+                <span className="dot-divider">•</span>
+                <button
+                  type="button"
+                  className={`p2p-header-pill ${isRemoteConnected ? 'is-connected' : ''}`}
+                  onClick={() => setShowRemoteModal(true)}
+                  title="Diagnóstico e Mapeamento de Controle Remoto BLE / HID"
+                >
+                  <Bluetooth size={13} className={isRemoteConnected ? 'text-cyan-400' : 'text-zinc-400'} />
+                  <span>{isRemoteConnected ? 'Controle Ativo' : 'Controle BLE'}</span>
                 </button>
               </div>
               <h1 className="prompter-title">
@@ -1738,6 +1848,8 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
               estimatedSpeechTime={estimatedSpeechTime}
               onOpenP2PModal={() => setShowP2PModal(true)}
               isP2PConnected={isP2PConnected}
+              onOpenRemoteModal={() => setShowRemoteModal(true)}
+              isRemoteConnected={isRemoteConnected}
               currentLine={activeLineIndex}
               totalLines={scriptLines.length}
               isVoiceListening={isVoiceListening}
@@ -1754,6 +1866,12 @@ Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuv
         onStartHosting={handleStartHosting}
         isConnected={isP2PConnected}
         statusMessage={p2pStatusMessage}
+      />
+
+      {/* MODAL DE DIAGNÓSTICO E MAPEAMENTO DO CONTROLE BLE */}
+      <PrompterRemoteModal
+        isOpen={showRemoteModal}
+        onClose={() => setShowRemoteModal(false)}
       />
     </div>
   );

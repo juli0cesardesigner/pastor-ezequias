@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Trash2 } from 'lucide-react';
 import type { AgendaEvent } from '../../../types/agenda';
 
 interface AgendaConfirmModalProps {
@@ -30,23 +30,20 @@ export const AgendaConfirmModal: React.FC<AgendaConfirmModalProps> = ({
   };
 
   return (
-    <div className="agenda-modal-overlay" onClick={onClose}>
-      <div className="agenda-modal-container agenda-confirm-container" onClick={(e) => e.stopPropagation()}>
+    <div className="agenda-centered-modal-overlay" onClick={onClose}>
+      <div className="agenda-centered-modal-container agenda-confirm-container" onClick={(e) => e.stopPropagation()}>
         <div className="agenda-modal-header">
           <div className="agenda-modal-title-wrap">
             <AlertTriangle size={22} style={{ color: '#ef4444' }} />
             <h3>Excluir Registro</h3>
           </div>
-          <button type="button" className="agenda-modal-close" onClick={onClose} aria-label="Fechar">
-            <X size={20} />
-          </button>
         </div>
 
         <div className="agenda-confirm-body">
           <p>
-            Tem certeza que deseja excluir o registro <strong>"{event.title}"</strong>?
+            Tem certeza que deseja excluir <strong>"{event.title}"</strong>?
           </p>
-          <span className="agenda-confirm-warning">Esta ação removerá o evento da agenda permanentemente.</span>
+          <span className="agenda-confirm-warning">Esta ação removerá o evento permanentemente.</span>
         </div>
 
         <div className="agenda-modal-actions">
@@ -65,7 +62,7 @@ export const AgendaConfirmModal: React.FC<AgendaConfirmModalProps> = ({
             disabled={isDeleting}
           >
             <Trash2 size={16} />
-            <span>{isDeleting ? 'Excluindo...' : 'Sim, Excluir'}</span>
+            <span>{isDeleting ? 'Excluindo...' : 'Excluir'}</span>
           </button>
         </div>
       </div>

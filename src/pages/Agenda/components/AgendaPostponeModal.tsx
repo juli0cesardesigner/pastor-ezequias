@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, CalendarClock, AlertCircle, FastForward } from 'lucide-react';
+import { CalendarClock, AlertCircle, Calendar as CalendarIcon } from 'lucide-react';
 import type { AgendaEvent } from '../../../types/agenda';
-import { CustomDatePicker } from './CustomDatePicker';
-import { CustomTimePicker } from './CustomTimePicker';
+import { InlineMonthCalendar } from './InlineMonthCalendar';
+import { IosTimePickerModal } from './IosTimePickerModal';
 
 interface AgendaPostponeModalProps {
   isOpen: boolean;
@@ -25,6 +25,8 @@ export const AgendaPostponeModal: React.FC<AgendaPostponeModalProps> = ({
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('09:00');
   const [reason, setReason] = useState('');
+  const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -38,7 +40,7 @@ export const AgendaPostponeModal: React.FC<AgendaPostponeModalProps> = ({
       const d = String(curr.getDate()).padStart(2, '0');
 
       setNewDate(`${y}-${m}-${d}`);
-      setNewTime(event.eventTime || '09:00');
+      setNewTime(event.eventTime && event.eventTime !== 'Dia Todo' ? event.eventTime : '09:00');
       setReason('');
       setErrorMsg(null);
     }
@@ -46,13 +48,14 @@ export const AgendaPostponeModal: React.FC<AgendaPostponeModalProps> = ({
 
   if (!isOpen || !event) return null;
 
-  const addDays = (days: number) => {
-    const base = new Date(`${event.eventDate}T12:00:00`);
-    base.setDate(base.getDate() + days);
-    const y = base.getFullYear();
-    const m = String(base.getMonth() + 1).padStart(2, '0');
-    const d = String(base.getDate()).padStart(2, '0');
-    setNewDate(`${y}-${m}-${d}`);
+  // Formata data de YYYY-MM-DD para DD/MM/AAAA
+  const formatDateBR = (ymd: string) => {
+    if (!ymd) return '';
+    const parts = ymd.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return ymd;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,21 +78,13 @@ export const AgendaPostponeModal: React.FC<AgendaPostponeModalProps> = ({
   };
 
   return (
-    <div className="agenda-modal-overlay" onClick={onClose}>
-      <div className="agenda-modal-container" onClick={(e) => e.stopPropagation()}>
+    <div className="agenda-centered-modal-overlay" onClick={onClose}>
+      <div className="agenda-centered-modal-container" onClick={(e) => e.stopPropagation()}>
         <div className="agenda-modal-header">
           <div className="agenda-modal-title-wrap">
             <CalendarClock className="text-gold" size={22} />
             <h3>Adiar Compromisso</h3>
           </div>
-          <button
-            type="button"
-            className="agenda-modal-close"
-            onClick={onClose}
-            aria-label="Fechar"
-          >
-            <X size={20} />
-          </button>
         </div>
 
         {errorMsg && (
@@ -103,49 +98,36 @@ export const AgendaPostponeModal: React.FC<AgendaPostponeModalProps> = ({
           <span className="postpone-preview-label">Compromisso a ser adiado:</span>
           <h4 className="postpone-preview-title">{event.title}</h4>
           <p className="postpone-preview-current">
-            Data atual: <strong>{event.eventDate}</strong> {event.eventTime ? `às ${event.eventTime}` : ''}
+            Data atual: <strong>{formatDateBR(event.eventDate)}</strong> {event.eventTime && event.eventTime !== 'Dia Todo' ? `às ${event.eventTime}` : ''}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="agenda-modal-form">
-          {/* Atalhos Rápidos de Nova Data */}
-          <div className="agenda-form-group">
-            <label>Sugestões Rápidas de Nova Data</label>
-            <div className="postpone-quick-buttons">
-              <button
-                type="button"
-                className="btn-quick-postpone"
-                onClick={() => addDays(1)}
-              >
-                Amanhã (+1 dia)
-              </button>
-              <button
-                type="button"
-                className="btn-quick-postpone"
-                onClick={() => addDays(2)}
-              >
-                +2 Dias
-              </button>
-              <button
-                type="button"
-                className="btn-quick-postpone"
-                onClick={() => addDays(7)}
-              >
-                Próxima Semana (+7 dias)
-              </button>
-            </div>
-          </div>
-
-          {/* Seletores de Nova Data e Novo Horário */}
+          {/* Nova Data e Novo Horário (Estilo iPhone Alarm) */}
           <div className="agenda-form-row">
             <div className="agenda-form-group flex-1">
               <label>Nova Data *</label>
-              <CustomDatePicker value={newDate} onChange={setNewDate} />
+              <button
+                type="button"
+                className="agenda-clean-input time-picker-trigger-btn flex items-center justify-between"
+                onClick={() => setIsCalendarOpen(true)}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <CalendarIcon size={16} className="text-agenda-primary" style={{ color: '#3b82f6' }} />
+                  <span>{formatDateBR(newDate) || 'Selecionar data'}</span>
+                </div>
+              </button>
             </div>
 
             <div className="agenda-form-group flex-1">
               <label>Novo Horário *</label>
-              <CustomTimePicker value={newTime} onChange={setNewTime} />
+              <button
+                type="button"
+                className="agenda-clean-input time-picker-trigger-btn"
+                onClick={() => setIsTimePickerOpen(true)}
+              >
+                {newTime}
+              </button>
             </div>
           </div>
 
@@ -155,7 +137,7 @@ export const AgendaPostponeModal: React.FC<AgendaPostponeModalProps> = ({
             <input
               id="postpone-reason"
               type="text"
-              placeholder="Ex: Imprevisto na comitiva, reunião urgente, reagendado a pedido..."
+              placeholder="Ex: Imprevisto na comitiva, reunião urgente..."
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />
@@ -173,14 +155,46 @@ export const AgendaPostponeModal: React.FC<AgendaPostponeModalProps> = ({
             </button>
             <button
               type="submit"
-              className="btn-agenda-save btn-postpone-confirm"
+              className="btn-agenda-save"
               disabled={isSubmitting}
             >
-              <FastForward size={16} />
-              <span>{isSubmitting ? 'Adiado...' : 'Confirmar e Migrar Data'}</span>
+              <span>{isSubmitting ? 'Confirmando...' : 'Confirmar'}</span>
             </button>
           </div>
         </form>
+
+        {/* Popup / Modal do Calendário para Escolha da Nova Data */}
+        {isCalendarOpen && (
+          <div className="agenda-calendar-popup-overlay" onClick={() => setIsCalendarOpen(false)}>
+            <div className="agenda-calendar-popup-container" onClick={(e) => e.stopPropagation()}>
+              <div className="agenda-calendar-popup-header">
+                <span className="agenda-calendar-popup-title">Selecionar Nova Data</span>
+                <button
+                  type="button"
+                  className="agenda-calendar-popup-close-btn"
+                  onClick={() => setIsCalendarOpen(false)}
+                >
+                  Concluir
+                </button>
+              </div>
+              <InlineMonthCalendar
+                value={newDate}
+                onChange={(dateYMD) => {
+                  setNewDate(dateYMD);
+                  setIsCalendarOpen(false);
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Horário estilo Alarme iPhone 24h Infinito */}
+        <IosTimePickerModal
+          isOpen={isTimePickerOpen}
+          value={newTime}
+          onChange={(val) => setNewTime(val)}
+          onClose={() => setIsTimePickerOpen(false)}
+        />
       </div>
     </div>
   );

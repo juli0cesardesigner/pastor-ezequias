@@ -1,24 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, MapPin, Tag, AlertCircle, FileText, CheckCircle2, Star, User, Repeat } from 'lucide-react';
-import type { AgendaEvent, AgendaEventInput, AgendaPriority, AgendaStatus, AgendaSessionUser, AgendaEventType } from '../../../types/agenda';
-import { CustomDatePicker } from './CustomDatePicker';
-import { CustomTimePicker } from './CustomTimePicker';
-import { CustomDropdown } from './CustomDropdown';
-
-const priorityModalOptions = [
-  { value: 'baixa', label: 'Baixa Prioridade', colorDot: '#10b981' },
-  { value: 'media', label: 'Média Prioridade', colorDot: '#3b82f6' },
-  { value: 'alta', label: 'Alta Prioridade', colorDot: '#f59e0b' },
-  { value: 'urgente', label: 'Urgente / Decisivo', colorDot: '#ef4444' },
-];
-
-const statusModalOptions = [
-  { value: 'pendente', label: 'Pendente / A Confirmar', colorDot: '#f59e0b' },
-  { value: 'confirmado', label: 'Confirmado', colorDot: '#10b981' },
-  { value: 'em_andamento', label: 'Em Andamento', colorDot: '#8b5cf6' },
-  { value: 'concluido', label: 'Concluído', colorDot: '#64748b' },
-  { value: 'cancelado', label: 'Cancelado', colorDot: '#ef4444' },
-];
+import { AlertCircle } from 'lucide-react';
+import type {
+  AgendaEvent,
+  AgendaEventInput,
+  AgendaSessionUser,
+} from '../../../types/agenda';
+import { InlineMonthCalendar } from './InlineMonthCalendar';
+import { DateTextInput } from './DateTextInput';
+import { IosTimePickerModal } from './IosTimePickerModal';
 
 interface AgendaModalProps {
   isOpen: boolean;
@@ -27,7 +16,7 @@ interface AgendaModalProps {
   editingEvent: AgendaEvent | null;
   currentUser: AgendaSessionUser;
   defaultDate?: string;
-  defaultEventType?: AgendaEventType;
+  dayEventsMap?: Record<string, { type: 'compromisso' | 'data_importante' }[]>;
 }
 
 export const AgendaModal: React.FC<AgendaModalProps> = ({
@@ -37,7 +26,7 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({
   editingEvent,
   currentUser,
   defaultDate,
-  defaultEventType = 'compromisso',
+  dayEventsMap = {},
 }) => {
   const getTodayString = () => {
     const d = new Date();
@@ -47,71 +36,73 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({
     return `${year}-${month}-${day}`;
   };
 
-  const [eventType, setEventType] = useState<AgendaEventType>(defaultEventType || 'compromisso');
-  const [date, setDate] = useState(defaultDate || getTodayString());
-  const [time, setTime] = useState('09:00');
+  // 1. Título do Compromisso
   const [title, setTitle] = useState('');
+
+  // 2. Data
+  const [date, setDate] = useState(defaultDate || getTodayString());
+
+  // 3. Horário
+  const [time, setTime] = useState('09:00');
+  const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
+
+  // 4. Toggle Recorrência
+  const [enableRecurrence, setEnableRecurrence] = useState(false);
+  const [recurrence, setRecurrence] = useState<'none' | 'semanal' | 'mensal' | 'anual'>('semanal');
+
+  // 5. Toggle Lembrete
+  const [enableReminder, setEnableReminder] = useState(false);
+  const [reminderMinutes, setReminderMinutes] = useState<number>(30);
+
+  // 6. Toggle Detalhes (Local + Anotações)
+  const [enableDetails, setEnableDetails] = useState(false);
   const [location, setLocation] = useState('');
-  const [priority, setPriority] = useState<AgendaPriority>('media');
-  const [status, setStatus] = useState<AgendaStatus>('pendente');
   const [notes, setNotes] = useState('');
-  
-  // Recurrence states
-  const [recurrence, setRecurrence] = useState<'none' | 'semanal' | 'mensal' | 'anual'>('none');
-  const [recurrenceLimit, setRecurrenceLimit] = useState<'sem_limite' | 'data_especifica'>('sem_limite');
-  const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (editingEvent) {
-      setEventType(editingEvent.eventType || 'compromisso');
+      setTitle(editingEvent.title);
       setDate(editingEvent.eventDate);
       setTime(editingEvent.eventTime || '09:00');
-      setTitle(editingEvent.title);
-      setLocation(editingEvent.location);
-      setPriority(editingEvent.priority);
-      setStatus(editingEvent.status);
-      setNotes(editingEvent.notes);
-      // Ao editar, não permitimos alterar repetição em lote nesta versão simples
+      setLocation(editingEvent.location || '');
+      setNotes(editingEvent.notes || '');
+
+      const hasDetails = Boolean((editingEvent.location && editingEvent.location.trim()) || (editingEvent.notes && editingEvent.notes.trim()));
+      setEnableDetails(hasDetails);
+
+      setEnableRecurrence(false);
       setRecurrence('none');
-      setRecurrenceLimit('sem_limite');
-      setRecurrenceEndDate('');
+
+      const hasReminderNote = editingEvent.notes && editingEvent.notes.includes('[Lembrete:');
+      setEnableReminder(Boolean(hasReminderNote));
     } else {
-      setEventType(defaultEventType || 'compromisso');
+      setTitle('');
       setDate(defaultDate || getTodayString());
       setTime('09:00');
-      setTitle('');
       setLocation('');
-      setPriority('media');
-      setStatus('pendente');
       setNotes('');
-      setRecurrence('none');
-      setRecurrenceLimit('sem_limite');
-      setRecurrenceEndDate('');
+      setEnableRecurrence(false);
+      setRecurrence('semanal');
+      setEnableReminder(false);
+      setReminderMinutes(30);
+      setEnableDetails(false);
     }
     setErrorMsg(null);
-  }, [editingEvent, defaultDate, defaultEventType, isOpen]);
+  }, [editingEvent, defaultDate, isOpen]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      setErrorMsg(
-        eventType === 'data_importante'
-          ? 'O título da data importante é obrigatório.'
-          : 'O título do compromisso é obrigatório.'
-      );
+      setErrorMsg('Informe o compromisso.');
       return;
     }
     if (!date) {
-      setErrorMsg('A data é obrigatória.');
-      return;
-    }
-    if (eventType === 'compromisso' && !time) {
-      setErrorMsg('O horário é obrigatório para compromissos.');
+      setErrorMsg('Selecione uma data.');
       return;
     }
 
@@ -119,17 +110,20 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({
     setErrorMsg(null);
 
     try {
+      const finalNotes = enableReminder && reminderMinutes > 0
+        ? `${notes.trim() ? notes.trim() + '\n' : ''}[Lembrete: ${reminderMinutes} min antes]`
+        : notes.trim();
+
       const input: AgendaEventInput = {
         eventDate: date,
-        eventTime: eventType === 'data_importante' ? 'Dia Todo' : time,
+        eventTime: time,
         title: title.trim(),
-        location: location.trim(),
-        notes: notes.trim(),
-        status: eventType === 'data_importante' ? 'confirmado' : status,
-        priority: eventType === 'data_importante' ? 'alta' : priority,
-        eventType,
-        recurrence: !editingEvent ? recurrence : 'none',
-        recurrenceEndDate: !editingEvent && recurrenceLimit === 'data_especifica' ? recurrenceEndDate : undefined,
+        location: enableDetails ? location.trim() : '',
+        notes: enableDetails ? finalNotes : (enableReminder ? `[Lembrete: ${reminderMinutes} min antes]` : ''),
+        status: 'pendente',
+        priority: 'media',
+        eventType: 'compromisso',
+        recurrence: !editingEvent && enableRecurrence ? recurrence : 'none',
         createdByName: editingEvent ? editingEvent.createdByName : currentUser.name,
         createdByUserId: editingEvent ? editingEvent.createdByUserId : currentUser.id,
       };
@@ -137,33 +131,15 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({
       await onSave(input, editingEvent?.id);
       onClose();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao salvar.');
+      setErrorMsg(err.message || 'Erro ao salvar o compromisso.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="agenda-modal-overlay" onClick={onClose}>
-      <div className="agenda-modal-container" onClick={(e) => e.stopPropagation()}>
-        <div className="agenda-modal-header">
-          <div className="agenda-modal-title-wrap">
-            {eventType === 'data_importante' ? (
-              <Star className="text-gold" size={22} />
-            ) : (
-              <Calendar className="text-gold" size={22} />
-            )}
-            <h3>
-              {editingEvent
-                ? (editingEvent.eventType === 'data_importante' ? 'Editar Data Importante' : 'Editar Compromisso')
-                : (eventType === 'data_importante' ? 'Nova Data Importante' : 'Novo Compromisso')}
-            </h3>
-          </div>
-          <button type="button" className="agenda-modal-close" onClick={onClose} aria-label="Fechar">
-            <X size={20} />
-          </button>
-        </div>
-
+    <div className="agenda-fullscreen-modal-overlay">
+      <div className="agenda-fullscreen-modal-container">
         {errorMsg && (
           <div className="agenda-modal-error">
             <AlertCircle size={16} />
@@ -171,158 +147,136 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="agenda-modal-form">
-          {eventType === 'data_importante' ? (
-            <div className="agenda-form-group">
-              <label>
-                <Calendar size={14} /> Data do Marco ou Comemoração *
-              </label>
-              <CustomDatePicker value={date} onChange={setDate} />
-              <span className="form-hint-text">
-                ⭐️ Esta data terá destaque exclusivo no topo do dia e sinalização dourada no calendário.
-              </span>
-            </div>
-          ) : (
-            <div className="agenda-form-row">
-              <div className="agenda-form-group flex-1">
-                <label>
-                  <Calendar size={14} /> Data *
-                </label>
-                <CustomDatePicker value={date} onChange={setDate} />
-              </div>
-
-              <div className="agenda-form-group flex-1">
-                <label>
-                  <Clock size={14} /> Horário *
-                </label>
-                <CustomTimePicker value={time} onChange={setTime} />
-              </div>
-            </div>
-          )}
-
-          <div className="agenda-form-group">
-            <label htmlFor="agenda-title">
-              <FileText size={14} />{' '}
-              {eventType === 'data_importante'
-                ? 'Título do Marco / Data Importante *'
-                : 'Título do Compromisso *'}
-            </label>
+        <form onSubmit={handleSubmit} className="agenda-ultra-clean-form">
+          {/* 1. TÍTULO */}
+          <div className="agenda-clean-item">
             <input
               id="agenda-title"
               type="text"
-              placeholder={
-                eventType === 'data_importante'
-                  ? 'Ex: Início do Horário Eleitoral, Aniversário do Pastor, Convenção...'
-                  : 'Ex: Culto de Santa Ceia, Reunião com Lideranças, Almoço...'
-              }
+              className="agenda-title-large-input"
+              placeholder="Compromisso..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
+              autoFocus
             />
           </div>
 
-          <div className="agenda-form-group">
-            <label htmlFor="agenda-location">
-              <MapPin size={14} /> Local / Cidade (Opcional)
-            </label>
-            <input
-              id="agenda-location"
-              type="text"
-              placeholder="Ex: Cariacica, Vitória, Grande Vitória ou local específico"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
+          {/* 2. CALENDÁRIO MENSUAL (< mes/ano >) */}
+          <div className="agenda-clean-item">
+            <InlineMonthCalendar
+              value={date}
+              onChange={setDate}
+              dayEventsMap={dayEventsMap}
             />
           </div>
 
-          {eventType === 'compromisso' && (
-            <div className="agenda-form-row">
-              <div className="agenda-form-group flex-1">
-                <label>
-                  <Tag size={14} /> Prioridade
-                </label>
-                <CustomDropdown
-                  value={priority}
-                  onChange={(val) => setPriority(val as AgendaPriority)}
-                  options={priorityModalOptions}
-                />
-              </div>
-
-              <div className="agenda-form-group flex-1">
-                <label>
-                  <CheckCircle2 size={14} /> Status
-                </label>
-                <CustomDropdown
-                  value={status}
-                  onChange={(val) => setStatus(val as AgendaStatus)}
-                  options={statusModalOptions}
-                />
-              </div>
+          {/* 3. [DATA] [HORA] NA MESMA LINHA */}
+          <div className="agenda-datetime-row">
+            <div className="datetime-col">
+              <DateTextInput value={date} onChange={setDate} />
             </div>
-          )}
+            <div className="datetime-col">
+              <button
+                type="button"
+                className="agenda-clean-input time-picker-trigger-btn"
+                onClick={() => setIsTimePickerOpen(true)}
+              >
+                {time}
+              </button>
+            </div>
+          </div>
 
+          {/* 4. [ ] RECORRÊNCIA - TOGGLE AUTOATIVÁVEL */}
           {!editingEvent && (
-            <div className="agenda-form-row">
-              <div className="agenda-form-group flex-1">
-                <label>
-                  <Repeat size={14} /> Repetição
-                </label>
-                <select
-                  value={recurrence}
-                  onChange={(e) => setRecurrence(e.target.value as any)}
-                  className="agenda-modal-input"
-                >
-                  <option value="none">Não repete</option>
-                  <option value="semanal">Semanalmente</option>
-                  <option value="mensal">Mensalmente</option>
-                  <option value="anual">Anualmente</option>
-                </select>
-              </div>
+            <div className="agenda-toggle-block">
+              <label className="agenda-toggle-trigger">
+                <input
+                  type="checkbox"
+                  checked={enableRecurrence}
+                  onChange={(e) => setEnableRecurrence(e.target.checked)}
+                />
+                <span className="toggle-label-text">Recorrência</span>
+              </label>
 
-              {recurrence !== 'none' && (
-                <div className="agenda-form-group flex-1">
-                  <label>Término</label>
+              {enableRecurrence && (
+                <div className="toggle-sub-content">
                   <select
-                    value={recurrenceLimit}
-                    onChange={(e) => {
-                      setRecurrenceLimit(e.target.value as any);
-                      if (e.target.value === 'sem_limite') setRecurrenceEndDate('');
-                    }}
-                    className="agenda-modal-input"
+                    value={recurrence}
+                    onChange={(e) => setRecurrence(e.target.value as any)}
+                    className="agenda-clean-input"
                   >
-                    <option value="sem_limite">Sem Limite</option>
-                    <option value="data_especifica">Até uma data</option>
+                    <option value="semanal">Semanal</option>
+                    <option value="mensal">Mensal</option>
+                    <option value="anual">Anual</option>
                   </select>
                 </div>
               )}
             </div>
           )}
 
-          {!editingEvent && recurrence !== 'none' && recurrenceLimit === 'data_especifica' && (
-            <div className="agenda-form-group">
-              <label>Data de Término da Repetição *</label>
-              <CustomDatePicker value={recurrenceEndDate} onChange={setRecurrenceEndDate} />
-            </div>
-          )}
-
-          <div className="agenda-form-group">
-            <label htmlFor="agenda-notes">
-              <FileText size={14} /> Pauta / Anotações Operacionais
+          {/* 5. [ ] LEMBRETE - TOGGLE AUTOATIVÁVEL */}
+          <div className="agenda-toggle-block">
+            <label className="agenda-toggle-trigger">
+              <input
+                type="checkbox"
+                checked={enableReminder}
+                onChange={(e) => setEnableReminder(e.target.checked)}
+              />
+              <span className="toggle-label-text">Lembrete</span>
             </label>
-            <textarea
-              id="agenda-notes"
-              rows={3}
-              placeholder="Observações da comitiva, pessoas de contato, demandas locais, etc."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
+
+            {enableReminder && (
+              <div className="toggle-sub-content">
+                <select
+                  value={reminderMinutes}
+                  onChange={(e) => setReminderMinutes(Number(e.target.value))}
+                  className="agenda-clean-input"
+                >
+                  <option value={0}>No momento</option>
+                  <option value={15}>15 minutos antes</option>
+                  <option value={30}>30 minutos antes</option>
+                  <option value={60}>1 hora antes</option>
+                  <option value={120}>2 horas antes</option>
+                  <option value={1440}>1 dia antes</option>
+                </select>
+              </div>
+            )}
           </div>
 
-          <div className="agenda-modal-author-badge">
-            <User size={14} className="text-gold" />
-            <span>Criado por: <strong>{editingEvent ? editingEvent.createdByName : currentUser.name}</strong></span>
+          {/* 6. [ ] DETALHES - TOGGLE AUTOATIVÁVEL */}
+          <div className="agenda-toggle-block">
+            <label className="agenda-toggle-trigger">
+              <input
+                type="checkbox"
+                checked={enableDetails}
+                onChange={(e) => setEnableDetails(e.target.checked)}
+              />
+              <span className="toggle-label-text">Detalhes</span>
+            </label>
+
+            {enableDetails && (
+              <div className="toggle-sub-content">
+                <input
+                  type="text"
+                  placeholder="Local..."
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="agenda-clean-input"
+                />
+                <textarea
+                  rows={3}
+                  placeholder="Anotações..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="agenda-clean-input"
+                />
+              </div>
+            )}
           </div>
 
-          <div className="agenda-modal-actions">
+          {/* Rodapé Fixo */}
+          <div className="agenda-fullscreen-actions">
             <button
               type="button"
               className="btn-agenda-cancel"
@@ -339,13 +293,19 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({
               {isSubmitting
                 ? 'Salvando...'
                 : editingEvent
-                ? 'Salvar Alterações'
-                : eventType === 'data_importante'
-                ? 'Cadastrar Data Importante'
-                : 'Cadastrar Compromisso'}
+                ? 'Salvar'
+                : 'Salvar'}
             </button>
           </div>
         </form>
+
+        {/* Seletor de Horário no Estilo Alarme do iPhone (24h) */}
+        <IosTimePickerModal
+          isOpen={isTimePickerOpen}
+          value={time}
+          onChange={(newTime) => setTime(newTime)}
+          onClose={() => setIsTimePickerOpen(false)}
+        />
       </div>
     </div>
   );
