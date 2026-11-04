@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Download, Share2, X, Smartphone } from 'lucide-react';
+import { isStandaloneMode } from '../../../hooks/useRoute';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -14,11 +15,7 @@ export const AgendaInstallBanner: React.FC = () => {
 
   useEffect(() => {
     // Verifica se já está rodando em modo standalone (PWA instalado)
-    const isRunningStandalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
-
-    setIsStandalone(isRunningStandalone);
+    setIsStandalone(isStandaloneMode());
 
     // Detecta iOS
     const ua = window.navigator.userAgent.toLowerCase();

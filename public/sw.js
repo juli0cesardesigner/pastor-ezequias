@@ -1,9 +1,14 @@
 // Service Worker para a Agenda PWA - Pastor Ezequias
-const CACHE_NAME = 'ezequias-agenda-cache-v1';
+const CACHE_NAME = 'ezequias-agenda-cache-v4';
 const STATIC_ASSETS = [
   '/',
+  '/?page=agenda',
   '/index.html',
   '/manifest.webmanifest',
+  '/apple-touch-icon.png',
+  '/agenda-icon-192.png',
+  '/agenda-icon-512.png',
+  '/agenda-icon.svg',
   '/foto.webp',
   '/nome.webp'
 ];
@@ -46,18 +51,52 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Requisições de navegação (HTML / SPA): Network first com fallback para cache
+  // Preserva query parameters como page=agenda
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200 && url.origin === self.location.origin) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, clone);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
+            if (cachedResponse) {
+              return cachedResponse;
+            }
+            return caches.match('/index.html').then((indexRes) => {
+              return indexRes || caches.match('/');
+            });
+          });
+        })
+    );
+    return;
+  }
+
+  // Requisições de assets estáticos e recursos: Cache first com fallback de rede e cache dinâmico
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
       return fetch(event.request).then((networkResponse) => {
-        return networkResponse;
-      }).catch(() => {
-        // Fallback básico para requisições de navegação offline
-        if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
+        if (
+          networkResponse &&
+          networkResponse.status === 200 &&
+          url.origin === self.location.origin
+        ) {
+          const clone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, clone);
+          });
         }
+        return networkResponse;
       });
     })
   );
@@ -74,7 +113,7 @@ self.addEventListener('push', (event) => {
   if (event.data) {
     try {
       data = { ...data, ...event.data.json() };
-    } catch (e) {
+    } catch {
       data.body = event.data.text();
     }
   }
@@ -106,7 +145,11 @@ self.addEventListener('notificationclick', (event) => {
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if ('focus' in client) {
-          client.navigate(targetUrl);
+          if (typeof client.navigate === 'function') {
+            return client.navigate(targetUrl)
+              .then((navClient) => (navClient || client).focus())
+              .catch(() => client.focus());
+          }
           return client.focus();
         }
       }

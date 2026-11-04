@@ -15,7 +15,54 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Agenda Ezequias" />
-    <link rel="apple-touch-icon" href="/agenda-icon.svg" />
+    <meta name="msapplication-starturl" content="/?page=agenda" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/agenda-icon-192.png" />
+    
+    <script>
+      // Garante que, ao iniciar o PWA instalado em modo standalone na raiz,
+      // a visualização e rota da Agenda (?page=agenda) sejam preservadas
+      // mantendo eventuais parâmetros de tracking e sem interferir na navegação padrão de navegadores web comuns.
+      (function() {
+        try {
+          var isStandalone = (typeof window !== 'undefined') && (
+            (window.matchMedia && (
+              window.matchMedia('(display-mode: standalone)').matches ||
+              window.matchMedia('(display-mode: fullscreen)').matches ||
+              window.matchMedia('(display-mode: minimal-ui)').matches
+            )) ||
+            (window.navigator && window.navigator.standalone === true) ||
+            (typeof document !== 'undefined' && typeof document.referrer === 'string' && document.referrer.indexOf('android-app://') === 0)
+          );
+          var p = (window.location.pathname || '').toLowerCase().trim().replace(/\/+/g, '/');
+          var isRoot = p === '/' || p === '' || p === '/index.html' || p === '/index.html/';
+          var cleanHash = (window.location.hash || '').toLowerCase().replace(/^#[!/]*\/?/, '').replace(/\/+$/, '').split('?')[0].trim();
+
+          if (isStandalone && isRoot && !cleanHash) {
+            var params = new URLSearchParams(window.location.search);
+            var explicitRoute = '';
+            var routeKeys = [];
+            params.forEach(function(value, key) {
+              var lk = key.toLowerCase();
+              if (lk === 'page' || lk === 'route' || lk === 'p') {
+                var v = (value || '').trim().toLowerCase().replace(/\/+$/, '');
+                if (v && !explicitRoute) explicitRoute = v;
+                routeKeys.push(key);
+              }
+            });
+            if (!explicitRoute) {
+              for (var i = 0; i < routeKeys.length; i++) {
+                params.delete(routeKeys[i]);
+              }
+              params.set('page', 'agenda');
+              var newSearch = params.toString();
+              window.history.replaceState(null, '', newSearch ? '/?' + newSearch : '/?page=agenda');
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
     
     <!-- Open Graph / WhatsApp / Facebook Preview Tags -->
     <meta property="og:type" content="website" />
