@@ -9,6 +9,7 @@ const STATIC_ASSETS = [
   '/agenda-icon-192.png',
   '/agenda-icon-512.png',
   '/agenda-icon.svg',
+  '/badge-icon.png',
   '/foto.webp',
   '/nome.webp'
 ];
@@ -120,8 +121,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: '/foto.webp',
-    badge: '/foto.webp',
+    icon: '/agenda-icon-192.png',
+    badge: '/badge-icon.png',
     vibrate: [100, 50, 100],
     data: {
       url: data.url || '/?page=agenda'
@@ -136,10 +137,30 @@ self.addEventListener('push', (event) => {
   );
 });
 
+// Listener de mensagens da aplicação (para exibição de notificações locais pelo Service Worker)
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const { title, options } = event.data;
+    const defaultOptions = {
+      icon: '/agenda-icon-192.png',
+      badge: '/badge-icon.png',
+      vibrate: [200, 100, 200],
+      data: {
+        url: '/?page=agenda'
+      }
+    };
+    const finalOptions = Object.assign({}, defaultOptions, options || {});
+    event.waitUntil(
+      self.registration.showNotification(title || 'Compromisso - Pastor Ezequias', finalOptions)
+    );
+  }
+});
+
 // Clique na Notificação
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || '/?page=agenda';
+  const rawUrl = event.notification.data?.url || '/?page=agenda';
+  const targetUrl = new URL(rawUrl, self.location.origin).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {

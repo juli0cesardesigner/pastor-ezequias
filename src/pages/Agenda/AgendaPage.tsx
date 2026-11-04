@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   getAgendaSession,
   clearAgendaSession,
@@ -15,10 +15,16 @@ import type {
   AgendaSessionUser,
 } from '../../types/agenda';
 import {
+  registerServiceWorker,
   isPushNotificationSupported,
   subscribeToPushNotifications,
   sendLocalNotification,
+  requestNotificationPermission,
 } from '../../utils/pwaService';
+import {
+  startReminderMonitor,
+  checkPendingReminders,
+} from '../../services/agendaReminderService';
 
 import { AgendaLogin } from './components/AgendaLogin';
 import { InlineMonthCalendar } from './components/InlineMonthCalendar';
@@ -74,6 +80,12 @@ export const AgendaPage: React.FC = () => {
     }
   }, [currentUser, loadEvents]);
 
+  // Mantém referência atualizada dos eventos para o monitor de lembretes
+  const eventsRef = useRef(events);
+  useEffect(() => {
+    eventsRef.current = events;
+  }, [events]);
+
   // Checa status de permissão Push ao carregar
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -81,31 +93,102 @@ export const AgendaPage: React.FC = () => {
     }
   }, []);
 
+  // Inicia o monitor de lembretes em background para disparar avisos de compromissos no celular
+  useEffect(() => {
+    if (currentUser && pushSubscribed) {
+      const stopMonitor = startReminderMonitor(() => eventsRef.current);
+      return () => {
+        stopMonitor();
+      };
+    }
+  }, [currentUser, pushSubscribed]);
+
   // Logout
   const handleLogout = () => {
     clearAgendaSession();
     setCurrentUser(null);
   };
 
-  // Solicitar Web Push
+  // Solicitar / Testar Notificações na Central do Celular
   const handleRequestPush = async () => {
-    if (!isPushNotificationSupported()) {
-      alert('Seu navegador atual não suporta notificações Push em background.');
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      alert('Seu navegador ou dispositivo atual não suporta notificações web.');
+      return;
+    }
+
+    // Detecção específica do ecossistema iOS (Safari)
+    const isIos = typeof navigator !== 'undefined' && /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+    const isStandalone = (typeof window !== 'undefined') && (
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
+      (window.matchMedia && (
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.matchMedia('(display-mode: fullscreen)').matches
+      ))
+    );
+
+    if (isIos && !isStandalone) {
+      alert(
+        'No iPhone (iOS), para receber avisos e notificações é necessário primeiro adicionar a Agenda à Tela de Início:\n\n' +
+        '1. Toque no botão Compartilhar do Safari (quadrado com seta para cima)\n' +
+        '2. Escolha "Adicionar à Tela de Início"\n' +
+        '3. Abra a Agenda pelo ícone criado na tela inicial e ative as notificações.'
+      );
       return;
     }
 
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const sub = await subscribeToPushNotifications(registration);
-      if (sub) {
-        setPushSubscribed(true);
-        await savePushSubscription(currentUser?.id, sub);
-        await sendLocalNotification('Agenda Pastor Ezequias', 'Notificações ativadas com sucesso no seu dispositivo!');
-      } else {
-        alert('Para receber avisos, permita as notificações nas configurações do seu navegador ou celular.');
+      let permission = Notification.permission;
+      if (permission !== 'granted') {
+        permission = await requestNotificationPermission();
       }
+
+      if (permission !== 'granted') {
+        setPushSubscribed(false);
+        alert('Para receber avisos, permita as notificações nas configurações do seu navegador ou celular.');
+        return;
+      }
+
+      // Permissão concedida
+      const wasAlreadySubscribed = pushSubscribed;
+      setPushSubscribed(true);
+
+      // Garante registro do Service Worker
+      let registration: ServiceWorkerRegistration | null = null;
+      if ('serviceWorker' in navigator) {
+        registration = (await navigator.serviceWorker.getRegistration()) || null;
+        if (!registration) {
+          registration = await registerServiceWorker();
+        }
+      }
+
+      // Tenta subscrição Web Push caso disponível
+      if (registration && isPushNotificationSupported()) {
+        try {
+          const sub = await subscribeToPushNotifications(registration);
+          if (sub) {
+            await savePushSubscription(currentUser?.id, sub);
+          }
+        } catch (pushErr) {
+          console.warn('Inscrição Web Push remota não ativa:', pushErr);
+        }
+      }
+
+      // Dispara IMEDIATAMENTE notificação na Central de Notificações do celular
+      await sendLocalNotification(
+        'Agenda Pastor Ezequias',
+        wasAlreadySubscribed
+          ? 'Notificações ativas! O alerta de teste foi enviado para o seu celular.'
+          : 'Notificações ativadas com sucesso! Você receberá avisos dos seus compromissos no celular.',
+        {
+          tag: 'agenda-confirmation-notification',
+          badge: '/badge-icon.png',
+          renotify: true,
+          data: { url: '/?page=agenda' }
+        }
+      );
     } catch (err) {
-      console.error('Erro ao ativar push:', err);
+      console.error('Erro ao ativar notificações:', err);
+      alert('Não foi possível ativar as notificações no momento.');
     }
   };
 
@@ -132,6 +215,11 @@ export const AgendaPage: React.FC = () => {
       setIsImportantDateModalOpen(false);
       setEditingEvent(null);
       await loadEvents();
+
+      // Checa imediatamente lembretes com os novos eventos cadastrados
+      if (pushSubscribed && Array.isArray(eventsRef.current)) {
+        checkPendingReminders(eventsRef.current).catch(() => {});
+      }
     } catch (err) {
       console.error('Erro ao salvar evento:', err);
       alert('Não foi possível salvar o registro. Tente novamente.');

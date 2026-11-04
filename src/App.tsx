@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Header } from './components/Header/Header';
 import { Footer } from './components/Footer/Footer';
 import { HomePage } from './pages/Home/HomePage';
@@ -11,10 +11,25 @@ import { AgendaPage } from './pages/Agenda/AgendaPage';
 import { VideosPage } from './pages/Videos/VideosPage';
 import { ElectionMapPage } from './pages/ElectionMap/ElectionMapPage';
 import { useRoute } from './hooks/useRoute';
+import { startReminderMonitor } from './services/agendaReminderService';
+import { getLocalAgendaEventsCache } from './services/agendaService';
 import './App.css';
 
 export const App: React.FC = () => {
   const { currentRoute, navigateTo } = useRoute();
+
+  // Mantém monitoramento de lembretes ativo em background mesmo navegando por outras páginas
+  useEffect(() => {
+    if (
+      currentRoute !== 'agenda' &&
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      Notification.permission === 'granted'
+    ) {
+      const stop = startReminderMonitor(() => getLocalAgendaEventsCache());
+      return () => stop();
+    }
+  }, [currentRoute]);
 
   if (currentRoute === 'ppt') {
     return <PrompterPage />;
