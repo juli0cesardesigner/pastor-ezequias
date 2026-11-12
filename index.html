@@ -21,11 +21,29 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/agenda-icon-192.png" />
     
     <script>
-      // Garante que, ao iniciar o PWA instalado em modo standalone na raiz,
-      // a visualização e rota da Agenda (?page=agenda) sejam preservadas
-      // mantendo eventuais parâmetros de tracking e sem interferir na navegação padrão de navegadores web comuns.
+      // Preserva o contexto da rota acessada para o modo standalone (PWA instalado).
+      // Salva e restaura a rota ativa sem desviar o usuário para telas indesejadas (ex: login da Agenda quando em /tp).
       (function() {
         try {
+          var p = (window.location.pathname || '').toLowerCase().trim().replace(/\/+/g, '/');
+          var isRoot = p === '/' || p === '' || p === '/index.html' || p === '/index.html/';
+          var cleanHash = (window.location.hash || '').toLowerCase().replace(/^#[!/]*\/?/, '').replace(/\/+$/, '').split('?')[0].trim();
+          var params = new URLSearchParams(window.location.search);
+          var pageParam = (params.get('page') || params.get('route') || params.get('p') || '').trim().toLowerCase();
+
+          // Identifica se a rota atual corresponde explicitamente ao Teleprompter
+          var isTpRoute = p === '/tp' || p.indexOf('/tp/') === 0 || p === '/ppt' || p.indexOf('/ppt/') === 0 ||
+                          p === '/prompter' || p.indexOf('/prompter/') === 0 || p === '/teleprompter' || p.indexOf('/teleprompter/') === 0 ||
+                          cleanHash === 'tp' || cleanHash === 'ppt' || cleanHash === 'prompter' || cleanHash === 'teleprompter' ||
+                          pageParam === 'tp' || pageParam === 'ppt' || pageParam === 'prompter' || pageParam === 'teleprompter';
+
+          // Salva no localStorage a última rota intencional para restauração no PWA standalone
+          if (isTpRoute) {
+            try { localStorage.setItem('pwa_last_active_route', 'ppt'); } catch(e) {}
+          } else if (pageParam === 'agenda' || p === '/agenda' || cleanHash === 'agenda') {
+            try { localStorage.setItem('pwa_last_active_route', 'agenda'); } catch(e) {}
+          }
+
           var isStandalone = (typeof window !== 'undefined') && (
             (window.matchMedia && (
               window.matchMedia('(display-mode: standalone)').matches ||
@@ -35,26 +53,15 @@
             (window.navigator && window.navigator.standalone === true) ||
             (typeof document !== 'undefined' && typeof document.referrer === 'string' && document.referrer.indexOf('android-app://') === 0)
           );
-          var p = (window.location.pathname || '').toLowerCase().trim().replace(/\/+/g, '/');
-          var isRoot = p === '/' || p === '' || p === '/index.html' || p === '/index.html/';
-          var cleanHash = (window.location.hash || '').toLowerCase().replace(/^#[!/]*\/?/, '').replace(/\/+$/, '').split('?')[0].trim();
 
-          if (isStandalone && isRoot && !cleanHash) {
-            var params = new URLSearchParams(window.location.search);
-            var explicitRoute = '';
-            var routeKeys = [];
-            params.forEach(function(value, key) {
-              var lk = key.toLowerCase();
-              if (lk === 'page' || lk === 'route' || lk === 'p') {
-                var v = (value || '').trim().toLowerCase().replace(/\/+$/, '');
-                if (v && !explicitRoute) explicitRoute = v;
-                routeKeys.push(key);
-              }
-            });
-            if (!explicitRoute) {
-              for (var i = 0; i < routeKeys.length; i++) {
-                params.delete(routeKeys[i]);
-              }
+          // Se estiver em modo standalone e na raiz sem rota explícita na URL, restaura a última rota do usuário
+          if (isStandalone && isRoot && !cleanHash && !pageParam) {
+            var savedRoute = 'agenda';
+            try { savedRoute = localStorage.getItem('pwa_last_active_route') || 'agenda'; } catch(e) {}
+
+            if (savedRoute === 'ppt') {
+              window.history.replaceState(null, '', '/tp');
+            } else if (savedRoute === 'agenda') {
               params.set('page', 'agenda');
               var newSearch = params.toString();
               window.history.replaceState(null, '', newSearch ? '/?' + newSearch : '/?page=agenda');

@@ -177,8 +177,14 @@ export function getRouteFromLocation(): PageRoute {
   }
 
   // Quando o app é aberto como PWA instalado (modo standalone) na raiz sem rota explícita,
-  // inicializa diretamente na Agenda.
+  // restaura a última rota ativa salva no localStorage (ex: 'ppt' se estava usando o Teleprompter, ou 'agenda').
   if (isStandaloneMode() && isRootPath(path) && !hash && !pageParam) {
+    try {
+      const savedRoute = localStorage.getItem('pwa_last_active_route');
+      if (savedRoute === 'ppt') {
+        return 'ppt';
+      }
+    } catch {}
     return 'agenda';
   }
 
@@ -203,9 +209,17 @@ export function useRoute() {
   const [currentRoute, setCurrentRoute] = useState<PageRoute>(getRouteFromLocation);
 
   useEffect(() => {
+    // Salva a rota ativa no localStorage para permitir que o PWA standalone reabra na mesma aplicação
+    try {
+      if (currentRoute === 'ppt') {
+        localStorage.setItem('pwa_last_active_route', 'ppt');
+      } else if (currentRoute === 'agenda') {
+        localStorage.setItem('pwa_last_active_route', 'agenda');
+      }
+    } catch {}
+
     // Se o PWA foi iniciado em modo standalone na raiz sem query params de rota,
-    // sincroniza a URL para refletir a inicialização na Agenda (?page=agenda)
-    // mantendo a consistência do start_url e eventuais tracking params sem disparar reload.
+    // sincroniza a URL respeitando a última rota ativa para evitar desviar indevidamente para o login da Agenda.
     if (
       isStandaloneMode() &&
       isRootPath(window.location.pathname) &&
@@ -214,19 +228,29 @@ export function useRoute() {
       const searchParams = new URLSearchParams(window.location.search);
       const explicitRoute = getExplicitRouteParam(searchParams);
       if (!explicitRoute) {
-        const keysToDelete: string[] = [];
-        for (const [k] of searchParams.entries()) {
-          const lk = k.toLowerCase();
-          if (lk === 'page' || lk === 'route' || lk === 'p') {
-            keysToDelete.push(k);
+        let savedRoute = 'agenda';
+        try {
+          savedRoute = localStorage.getItem('pwa_last_active_route') || 'agenda';
+        } catch {}
+
+        if (savedRoute === 'ppt') {
+          window.history.replaceState({}, '', '/tp');
+          setCurrentRoute('ppt');
+        } else {
+          const keysToDelete: string[] = [];
+          for (const [k] of searchParams.entries()) {
+            const lk = k.toLowerCase();
+            if (lk === 'page' || lk === 'route' || lk === 'p') {
+              keysToDelete.push(k);
+            }
           }
+          for (const k of keysToDelete) {
+            searchParams.delete(k);
+          }
+          searchParams.set('page', 'agenda');
+          const newSearch = searchParams.toString();
+          window.history.replaceState({}, '', newSearch ? `/?${newSearch}` : '/?page=agenda');
         }
-        for (const k of keysToDelete) {
-          searchParams.delete(k);
-        }
-        searchParams.set('page', 'agenda');
-        const newSearch = searchParams.toString();
-        window.history.replaceState({}, '', newSearch ? `/?${newSearch}` : '/?page=agenda');
       }
     }
 

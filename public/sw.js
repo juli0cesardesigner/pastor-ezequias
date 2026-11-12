@@ -1,8 +1,9 @@
-// Service Worker para a Agenda PWA - Pastor Ezequias
-const CACHE_NAME = 'ezequias-agenda-cache-v5';
+// Service Worker para PWA - Pastor Ezequias
+const CACHE_NAME = 'ezequias-agenda-cache-v6';
 const STATIC_ASSETS = [
   '/',
   '/?page=agenda',
+  '/tp',
   '/index.html',
   '/manifest.webmanifest',
   '/apple-touch-icon.png',

@@ -31,6 +31,24 @@
   ],
   "shortcuts": [
     {
+      "name": "Teleprompter",
+      "short_name": "Teleprompter",
+      "description": "Estúdio de leitura e gravação de vídeos",
+      "url": "/tp",
+      "icons": [
+        {
+          "src": "/agenda-icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        },
+        {
+          "src": "/agenda-icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
       "name": "Agenda",
       "short_name": "Agenda",
       "description": "Compromissos e Datas Importantes",
