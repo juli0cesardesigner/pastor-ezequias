@@ -34,8 +34,11 @@ function calculateSpeedPixelsPerSecond(speed) {
 
 function computeTouchPrimaryDelta(deltaX, deltaY, isLandscape) {
   if (isLandscape) {
-    return Math.abs(deltaX) >= Math.abs(deltaY) ? -deltaX : -deltaY;
+    // In 90° clockwise, physical gesture is inverted relative to raw cartesian coordinates:
+    // moving finger right (+deltaX) advances text forward (+scroll)
+    return Math.abs(deltaX) >= Math.abs(deltaY) ? deltaX : deltaY;
   } else {
+    // In 0° portrait: dragging finger UP (negative deltaY) advances text forward (+scroll)
     return Math.abs(deltaY) >= Math.abs(deltaX) ? -deltaY : -deltaX;
   }
 }
@@ -99,15 +102,14 @@ test('Teleprompter Scroller: Touch Primary Delta handles both Portrait (0°) and
   assert.equal(computeTouchPrimaryDelta(0, 50, false), -50);
 
   // Landscape (90° clockwise):
-  // The reading flow goes along physical horizontal axis:
-  // Dragging finger LEFT on physical screen (deltaX = -80): advances text forward (+80)
-  assert.equal(computeTouchPrimaryDelta(-80, 5, true), 80);
-  // Dragging finger RIGHT on physical screen (deltaX = +80): retreats text backward (-80)
-  assert.equal(computeTouchPrimaryDelta(80, -5, true), -80);
+  // When screen is rotated 90deg, natural reading swipe direction:
+  // Dragging finger to advance text:
+  assert.equal(computeTouchPrimaryDelta(80, 5, true), 80);
+  assert.equal(computeTouchPrimaryDelta(-80, -5, true), -80);
 
-  // If user holds phone sideways and drags physically up/down in landscape:
-  assert.equal(computeTouchPrimaryDelta(5, -70, true), 70);
-  assert.equal(computeTouchPrimaryDelta(5, 70, true), -70);
+  // If user swipes vertically when device is held in landscape:
+  assert.equal(computeTouchPrimaryDelta(5, 70, true), 70);
+  assert.equal(computeTouchPrimaryDelta(5, -70, true), -70);
 });
 
 test('Teleprompter Scroller: Auto-scroll accumulates subpixel progress smoothly without truncation', () => {

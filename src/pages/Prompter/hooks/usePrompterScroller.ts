@@ -417,8 +417,13 @@ export const usePrompterScroller = ({
         // Se o usuário segurar o celular deitado ou em pé, aceita a direção predominante
         let primaryDelta = 0;
         if (isLandscape) {
-          primaryDelta = Math.abs(totalDx) >= Math.abs(totalDy) ? -totalDx : -totalDy;
+          // Em 90° clockwise: o topo do texto está à direita da tela física e o rodapé à esquerda.
+          // Mover o dedo da esquerda para a direita (+totalDx) puxa o texto para baixo (avança o scroll).
+          // Mover o dedo da direita para a esquerda (-totalDx) empurra o texto para cima (recua o scroll).
+          // Na vertical física com o aparelho girado: arrastar para baixo (+totalDy) ou para cima (-totalDy)
+          primaryDelta = Math.abs(totalDx) >= Math.abs(totalDy) ? totalDx : totalDy;
         } else {
+          // Em 0° retrato: arrastar para cima (-totalDy) avança o texto para baixo (+scroll)
           primaryDelta = Math.abs(totalDy) >= Math.abs(totalDx) ? -totalDy : -totalDx;
         }
 
