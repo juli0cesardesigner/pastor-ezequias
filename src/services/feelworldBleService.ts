@@ -1,5 +1,12 @@
 /**
  * Serviço de Conexão e Gerenciamento BLE para Controle Remoto FEELWORLD TP2A
+ *
+ * Implementa arquitetura resiliente para Web Bluetooth API:
+ * - Persistência transparente via navigator.bluetooth.getDevices()
+ * - Watchdog com loop contínuo de reconexão automática e backoff adaptativo
+ * - Suporte híbrido a watchAdvertisements() (onde disponível) e polling inteligente
+ * - Idempotência total e prevenção de vazamento de listeners com AbortController
+ * - Detecção e proteção contra chamadas concorrentes a targetDev.gatt.connect()
  */
 
 export const FEELWORLD_PRIMARY_SERVICE = '00001000-e619-419b-bc43-821e71a409b7';
@@ -12,6 +19,8 @@ export interface WebBluetoothDevice extends EventTarget {
     connect: () => Promise<WebBluetoothRemoteGATTServer>;
     disconnect: () => void;
   };
+  watchAdvertisements?: (options?: { signal?: AbortSignal }) => Promise<void>;
+  watchingAdvertisements?: boolean;
 }
 
 export interface WebBluetoothRemoteGATTServer {
@@ -60,9 +69,11 @@ export type RemoteActionType =
   | 'PREV_LINE'
   | 'NEXT_LINE';
 
+export type BleConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
+
 type RemoteActionCallback = (action: RemoteActionType, details?: string) => void;
 type RawPacketCallback = (bytes: number[], hex: string, actionLabel: string) => void;
-type ConnectionStateCallback = (connected: boolean, deviceName: string | null) => void;
+type ConnectionStateCallback = (connected: boolean, deviceName: string | null, status?: BleConnectionStatus) => void;
 
 class FeelworldBleService {
   private device: WebBluetoothDevice | null = null;
@@ -70,10 +81,16 @@ class FeelworldBleService {
   private isConnecting: boolean = false;
   private autoReconnectActive: boolean = true;
   private reconnectTimer: number | null = null;
+  private reconnectAttempt: number = 0;
+  private status: BleConnectionStatus = 'disconnected';
 
   private actionListeners: Set<RemoteActionCallback> = new Set();
   private rawPacketListeners: Set<RawPacketCallback> = new Set();
   private connectionListeners: Set<ConnectionStateCallback> = new Set();
+
+  // Controladores de ciclo de vida para evitar vazamento de event listeners
+  private connectionAbortController: AbortController | null = null;
+  private adsAbortController: AbortController | null = null;
 
   // Estados anteriores para detecção de borda de subida (keyup -> keydown)
   private prevButtonMask: number = 0; // (b6 << 8) | b7
@@ -81,14 +98,17 @@ class FeelworldBleService {
   private lastJoyTriggerTime: number = 0;
 
   constructor() {
-    // Tentar reconexão automática silenciosa ao inicializar se já houver dispositivo previamente autorizado
     if (typeof window !== 'undefined') {
-      window.addEventListener('load', () => {
+      // Disparo inicial seguro assim que o DOM ou a janela carregar
+      if (document.readyState === 'complete') {
         this.tryAutoConnectSilently();
-      });
-      // Reconectar se a aba voltar a ter foco (ex: usuário voltou para o app)
+      } else {
+        window.addEventListener('load', () => this.tryAutoConnectSilently(), { once: true });
+      }
+
+      // Reconectar se a aba voltar a ter foco (ex: usuário desbloqueou celular ou voltou ao app)
       document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible' && !this.isConnected()) {
+        if (document.visibilityState === 'visible' && !this.isConnected() && this.autoReconnectActive) {
           this.tryAutoConnectSilently();
         }
       });
@@ -97,6 +117,10 @@ class FeelworldBleService {
 
   public isConnected(): boolean {
     return !!(this.server && this.server.connected);
+  }
+
+  public getStatus(): BleConnectionStatus {
+    return this.status;
   }
 
   public getDeviceName(): string | null {
@@ -115,48 +139,69 @@ class FeelworldBleService {
 
   public onConnectionChange(cb: ConnectionStateCallback): () => void {
     this.connectionListeners.add(cb);
-    // Notificar estado atual de imediato
-    cb(this.isConnected(), this.getDeviceName());
+    cb(this.isConnected(), this.getDeviceName(), this.status);
     return () => this.connectionListeners.delete(cb);
   }
 
-  private notifyConnection(connected: boolean) {
+  private notifyConnection(connected: boolean, statusOverride?: BleConnectionStatus) {
+    this.status = statusOverride || (connected ? 'connected' : 'disconnected');
     const name = connected ? this.device?.name || 'FEELWORLD' : null;
-    this.connectionListeners.forEach((cb) => cb(connected, name));
+    this.connectionListeners.forEach((cb) => cb(connected, name, this.status));
   }
 
   /**
-   * Tenta reconectar silenciosamente usando permissões já concedidas pelo usuário (getDevices)
-   * Isso roda sem exibir popup nem modal!
+   * Tenta reconectar silenciosamente usando permissões já concedidas (getDevices)
+   * Se o controle estiver em deep sleep, NÃO desiste: agenda tentativas em background.
    */
   public async tryAutoConnectSilently(): Promise<boolean> {
-    if (this.isConnected() || this.isConnecting) return this.isConnected();
+    if (this.isConnected() || this.isConnecting) {
+      return this.isConnected();
+    }
 
     const nav = typeof navigator !== 'undefined' ? (navigator as unknown as NavigatorWithBluetooth) : null;
     if (!nav?.bluetooth?.getDevices) return false;
 
+    this.autoReconnectActive = true;
+    this.isConnecting = true;
+    this.notifyConnection(false, 'reconnecting');
+
     try {
       const knownDevices = await nav.bluetooth.getDevices();
-      if (!knownDevices || knownDevices.length === 0) return false;
+      if (!knownDevices || knownDevices.length === 0) {
+        this.isConnecting = false;
+        this.notifyConnection(false, 'disconnected');
+        return false;
+      }
 
       const lastId = typeof localStorage !== 'undefined' ? localStorage.getItem('feelworld_device_id') : null;
 
       const targetDev =
         (lastId ? knownDevices.find((d) => d.id === lastId) : null) ||
         knownDevices.find((d) => d.name && d.name.toUpperCase().includes('FEELWORLD')) ||
-        knownDevices[0]; // Se houver apenas 1 dispositivo previamente permitido no app
+        knownDevices[0];
 
       if (targetDev) {
+        this.device = targetDev;
+        // Inicia escuta reativa de anúncios (wake-up por rádio) se suportado
+        this.setupAdvertisementWatch(targetDev);
         return await this.setupDevice(targetDev);
       }
-    } catch (e) {
-      // Falha silenciosa de auto-reconexão
+    } catch {
+      // Se falhou porque o controle está dormindo, NÃO desiste: agenda reconexão com watchdog
+      if (this.autoReconnectActive && this.device) {
+        this.scheduleReconnect();
+      }
+    } finally {
+      this.isConnecting = false;
+      if (!this.isConnected()) {
+        this.notifyConnection(false, this.autoReconnectActive ? 'reconnecting' : 'disconnected');
+      }
     }
     return false;
   }
 
   /**
-   * Conectar via prompt nativo do usuário (primeira vez)
+   * Conectar via prompt nativo do usuário (primeiro pareamento)
    */
   public async connect(): Promise<boolean> {
     if (this.isConnected()) return true;
@@ -169,6 +214,7 @@ class FeelworldBleService {
 
     this.isConnecting = true;
     this.autoReconnectActive = true;
+    this.notifyConnection(false, 'connecting');
 
     try {
       const selectedDevice = await nav.bluetooth.requestDevice({
@@ -176,6 +222,8 @@ class FeelworldBleService {
         optionalServices: [FEELWORLD_PRIMARY_SERVICE],
       });
 
+      this.device = selectedDevice;
+      this.setupAdvertisementWatch(selectedDevice);
       return await this.setupDevice(selectedDevice);
     } catch (err) {
       this.disconnect();
@@ -186,7 +234,42 @@ class FeelworldBleService {
   }
 
   /**
-   * Configuração interna do GATT Server, Characteristics e Watchdog
+   * Monitoramento de pacotes de anúncio Bluetooth (wake-up reativo quando o usuário aperta qualquer botão)
+   */
+  private setupAdvertisementWatch(device: WebBluetoothDevice) {
+    if (typeof device.watchAdvertisements !== 'function') {
+      return;
+    }
+
+    try {
+      if (this.adsAbortController) {
+        this.adsAbortController.abort();
+      }
+      this.adsAbortController = new AbortController();
+
+      device
+        .watchAdvertisements({ signal: this.adsAbortController.signal })
+        .then(() => {
+          device.addEventListener(
+            'advertisementreceived',
+            async () => {
+              if (!this.isConnected() && !this.isConnecting && this.autoReconnectActive) {
+                await this.setupDevice(device).catch(() => {});
+              }
+            },
+            { signal: this.adsAbortController?.signal }
+          );
+        })
+        .catch(() => {
+          // Ignora silenciosamente se o navegador rejeitar watchAdvertisements
+        });
+    } catch {
+      // Fallback seguro se não suportado
+    }
+  }
+
+  /**
+   * Configuração interna do GATT Server, Characteristics e Limpeza Idempotente de Listeners
    */
   private async setupDevice(deviceToConnect: WebBluetoothDevice): Promise<boolean> {
     this.device = deviceToConnect;
@@ -195,15 +278,26 @@ class FeelworldBleService {
       localStorage.setItem('feelworld_device_id', deviceToConnect.id);
     }
 
-    // Listener para reconexão automática se o controle dormir ou cair
-    deviceToConnect.addEventListener('gattserverdisconnected', () => {
-      this.server = null;
-      this.notifyConnection(false);
+    // Limpa event listeners anteriores para evitar acúmulo e disparos em duplicidade
+    if (this.connectionAbortController) {
+      this.connectionAbortController.abort();
+    }
+    this.connectionAbortController = new AbortController();
+    const { signal } = this.connectionAbortController;
 
-      if (this.autoReconnectActive) {
-        this.scheduleReconnect();
-      }
-    });
+    // Listener para reconexão automática se o controle adormecer ou perder sinal
+    deviceToConnect.addEventListener(
+      'gattserverdisconnected',
+      () => {
+        this.server = null;
+        this.notifyConnection(false, this.autoReconnectActive ? 'reconnecting' : 'disconnected');
+
+        if (this.autoReconnectActive) {
+          this.scheduleReconnect();
+        }
+      },
+      { signal }
+    );
 
     const gattServer = await deviceToConnect.gatt?.connect();
     if (!gattServer) {
@@ -217,12 +311,16 @@ class FeelworldBleService {
     for (const char of chars) {
       if (char.properties.notify || char.properties.indicate) {
         await char.startNotifications();
-        char.addEventListener('characteristicvaluechanged', (ev: Event) => {
-          const target = ev.target as unknown as { value?: DataView };
-          if (target?.value) {
-            this.handleIncomingData(target.value);
-          }
-        });
+        char.addEventListener(
+          'characteristicvaluechanged',
+          (ev: Event) => {
+            const target = ev.target as unknown as { value?: DataView };
+            if (target?.value) {
+              this.handleIncomingData(target.value);
+            }
+          },
+          { signal }
+        );
       }
     }
 
@@ -230,46 +328,75 @@ class FeelworldBleService {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+    this.reconnectAttempt = 0;
 
     this.notifyConnection(true);
     return true;
   }
 
   /**
-   * Watchdog: tenta reatar a conexão a cada 3 segundos quando o controle dorme ou perde sinal
+   * Watchdog com Polling Inteligente e Backoff Adaptativo
+   * Se o controle estiver em deep sleep, tenta reconectar a cada 3~8 segundos.
+   * Assim que o apresentador aperta qualquer botão no controle, o handshake é completado.
    */
   private scheduleReconnect() {
     if (this.reconnectTimer || !this.autoReconnectActive) return;
 
+    // Backoff adaptativo: 2.5s nas primeiras tentativas, até 6s para não sobrecarregar o rádio
+    const delay = Math.min(2500 + this.reconnectAttempt * 600, 6000);
+
     this.reconnectTimer = window.setTimeout(async () => {
       this.reconnectTimer = null;
-      if (!this.isConnected() && this.device) {
+      if (!this.isConnected() && this.device && this.autoReconnectActive) {
+        this.reconnectAttempt++;
         try {
-          await this.setupDevice(this.device);
+          if (!this.isConnecting) {
+            this.isConnecting = true;
+            await this.setupDevice(this.device);
+          }
         } catch {
-          // Continua tentando enquanto autoReconnectActive for true
+          // Continua o loop de reconexão
           this.scheduleReconnect();
+        } finally {
+          this.isConnecting = false;
         }
       }
-    }, 2800);
+    }, delay);
   }
 
+  /**
+   * Desconexão manual voluntária pelo usuário
+   */
   public disconnect() {
     this.autoReconnectActive = false;
+    this.reconnectAttempt = 0;
+
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+
+    if (this.connectionAbortController) {
+      this.connectionAbortController.abort();
+      this.connectionAbortController = null;
+    }
+
+    if (this.adsAbortController) {
+      this.adsAbortController.abort();
+      this.adsAbortController = null;
+    }
+
     if (this.server?.connected) {
       try {
         this.server.disconnect();
       } catch {}
     }
+
     this.device = null;
     this.server = null;
     this.prevButtonMask = 0;
     this.lastJoyDirection = 'NEUTRAL';
-    this.notifyConnection(false);
+    this.notifyConnection(false, 'disconnected');
   }
 
   /**
@@ -282,16 +409,15 @@ class FeelworldBleService {
     }
     const hex = bytes.map((b) => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
 
-    if (bytes.length < 8 || bytes[0] !== 0xA1) {
+    if (bytes.length < 8 || bytes[0] !== 0xa1) {
       return;
     }
 
-    const b2 = bytes[2]; // Joy X (reservado para implementação futura de esquerda/direita)
+    const b2 = bytes[2];
     const b3 = bytes[3]; // Joy Y
     const b6 = bytes[6]; // Máscara de Botões 1
     const b7 = bytes[7]; // Máscara de Botões 2
 
-    // Manter referência de b2 para futuras expansões sem disparar TS6133
     void b2;
 
     const currentButtonMask = (b6 << 8) | b7;
@@ -302,7 +428,7 @@ class FeelworldBleService {
 
     // ==========================================
     // 1. MAPEAMENTO DOS BOTÕES FÍSICOS DIGITAIS
-    // (Apenas no momento do clique / subida)
+    // (Apenas no momento do clique / borda de subida)
     // ==========================================
     const isNewPress = currentButtonMask !== 0 && currentButtonMask !== prevMask;
 
@@ -354,11 +480,10 @@ class FeelworldBleService {
 
     if (b3 < 0x40) {
       joyDirection = 'UP';
-    } else if (b3 > 0xC0) {
+    } else if (b3 > 0xc0) {
       joyDirection = 'DOWN';
     }
 
-    // Throttle / Debounce para não disparar 50 linhas em 1 segundo
     if (joyDirection !== 'NEUTRAL') {
       const isInitialPush = this.lastJoyDirection !== joyDirection;
       const timeSinceLast = now - this.lastJoyTriggerTime;
