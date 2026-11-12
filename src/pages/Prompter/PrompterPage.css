@@ -1071,6 +1071,10 @@
   height: 100dvh;
   overflow: hidden;
   z-index: 999;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 /* Modo Paisagem Forçado / Rotações em passos de 45 graus */
@@ -1135,6 +1139,13 @@
   height: 100vh !important;
   height: 100dvh !important;
   overflow-y: auto !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  touch-action: auto !important;
+}
+
+.prompter-reading-screen.is-inline-editing-active .prompter-scroll-viewport {
+  touch-action: auto !important;
 }
 
 .prompter-reading-screen.is-mirrored .prompter-text-column {
@@ -1146,12 +1157,16 @@
 }
 
 .prompter-scroll-viewport {
+  position: relative;
   width: 100%;
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  touch-action: none;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 .prompter-scroll-viewport::-webkit-scrollbar {
@@ -1555,7 +1570,7 @@
 .prompter-floating-hud {
   position: fixed;
   inset: 0;
-  pointer-events: none;
+  pointer-events: none !important;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -1579,21 +1594,24 @@
 }
 
 .prompter-floating-hud > * {
-  pointer-events: auto;
+  pointer-events: none;
 }
 
-/* Container do Modo Retrato */
+/* Container do Modo Retrato: transparente para não bloquear toque no centro da tela */
 .prompter-hud-portrait-wrap {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   width: 100%;
   height: 100%;
-  pointer-events: none;
+  pointer-events: none !important;
 }
 
-.prompter-hud-portrait-wrap > * {
-  pointer-events: auto;
+.prompter-hud-top,
+.prompter-hud-bottom,
+.prompter-hud-landscape-dock,
+.prompter-settings-drawer {
+  pointer-events: auto !important;
 }
 
 /* ==========================================================================

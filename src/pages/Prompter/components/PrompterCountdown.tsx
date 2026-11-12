@@ -22,7 +22,13 @@ export const PrompterCountdown: React.FC<PrompterCountdownProps> = ({ onComplete
   }, [count, onComplete]);
 
   return (
-    <div className="prompter-countdown-overlay" onClick={onComplete}>
+    <div
+      className="prompter-countdown-overlay"
+      onClick={(e) => {
+        e.stopPropagation();
+        onComplete();
+      }}
+    >
       <div className="prompter-countdown-content">
         <div className="prompter-countdown-number" key={count}>
           {count > 0 ? count : 'GO!'}

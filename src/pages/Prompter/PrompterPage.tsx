@@ -63,21 +63,53 @@ export const PrompterPage: React.FC = () => {
   // Array de linhas do roteiro memoizado
   const scriptLines = useMemo(() => text.split('\n'), [text]);
 
+  // Visibilidade dos controles no leitor
+  const triggerControlsVisibility = useCallback(() => {
+    setShowControls(true);
+    if (hideControlsTimerRef.current) clearTimeout(hideControlsTimerRef.current);
+    if (isPlaying) {
+      hideControlsTimerRef.current = window.setTimeout(() => setShowControls(false), 2400);
+    }
+  }, [isPlaying]);
+
+  const togglePlay = useCallback(() => {
+    setIsPlaying((prev) => {
+      const next = !prev;
+      if (next) {
+        setShowControls(false);
+        if (hideControlsTimerRef.current) clearTimeout(hideControlsTimerRef.current);
+      } else {
+        setShowControls(true);
+      }
+      return next;
+    });
+  }, []);
+
+  const pauseReading = useCallback(() => {
+    setIsPlaying(false);
+    setShowControls(true);
+  }, []);
+
   // Hook de Rolagem 60fps & Roleta
   const scroller = usePrompterScroller({
     mode,
     isPlaying,
+    onTogglePlay: togglePlay,
+    onPause: pauseReading,
     speed: settings.speed,
     showCountdown,
     isInlineEditing,
     forceLandscape: settings.forceLandscape,
+    rotationAngle: settings.rotationAngle,
     fontSize: settings.fontSize,
     maxWidth: settings.maxWidth,
+    scriptLinesCount: scriptLines.length,
     onActiveLineChange: setActiveLineIndex,
     onReachEnd: () => {
       setIsPlaying(false);
       setShowControls(true);
     },
+    onTriggerControls: triggerControlsVisibility,
   });
 
   // Wake Lock durante modo leitura
@@ -137,45 +169,19 @@ export const PrompterPage: React.FC = () => {
     return () => document.removeEventListener('fullscreenchange', onFsChange);
   }, []);
 
-  // Visibilidade dos controles no leitor
-  const triggerControlsVisibility = useCallback(() => {
-    setShowControls(true);
-    if (hideControlsTimerRef.current) clearTimeout(hideControlsTimerRef.current);
-    if (isPlaying) {
-      hideControlsTimerRef.current = window.setTimeout(() => setShowControls(false), 2400);
-    }
-  }, [isPlaying]);
-
   // Ações de Início / Play / Pause
   const handleStartReading = useCallback(() => {
     if (!text.trim()) return;
     setMode('reading');
     setShowCountdown(true);
     setShowControls(false);
-    scroller.currentScrollRef.current = 0;
-    if (scroller.scrollerRef.current) scroller.scrollerRef.current.scrollTop = 0;
+    scroller.restart();
     if (!feelworldBle.isConnected()) feelworldBle.tryAutoConnectSilently().catch(() => {});
     if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
   }, [text, scroller]);
 
-  const togglePlay = useCallback(() => {
-    setIsPlaying((prev) => {
-      const next = !prev;
-      if (next) {
-        setShowControls(false);
-        if (hideControlsTimerRef.current) clearTimeout(hideControlsTimerRef.current);
-      } else {
-        setShowControls(true);
-      }
-      return next;
-    });
-  }, []);
-
   const handleRestart = useCallback(() => {
-    scroller.currentScrollRef.current = 0;
-    scroller.activeLineIndexRef.current = 0;
-    setActiveLineIndex(0);
-    if (scroller.scrollerRef.current) scroller.scrollerRef.current.scrollTop = 0;
+    scroller.restart();
     triggerControlsVisibility();
   }, [scroller, triggerControlsVisibility]);
 
@@ -203,8 +209,7 @@ export const PrompterPage: React.FC = () => {
     setMode('reading');
     setShowCountdown(true);
     setShowControls(false);
-    scroller.currentScrollRef.current = 0;
-    if (scroller.scrollerRef.current) scroller.scrollerRef.current.scrollTop = 0;
+    scroller.restart();
     if (!feelworldBle.isConnected()) feelworldBle.tryAutoConnectSilently().catch(() => {});
     if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
   }, [cloud, setText, scroller]);
@@ -282,6 +287,134 @@ export const PrompterPage: React.FC = () => {
       unsubAction();
     };
   }, [mode, settings.speed, settings.fontSize, handleStartReading, togglePlay, updateSetting, handleRestart, handleBackToEdit, scroller, triggerControlsVisibility]);
+
+  // Atalhos de teclado no Desktop e Controles Remotos Wireless/Bluetooth (HID)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Se estiver digitando no editor principal, permitir apenas Ctrl/Cmd+Enter para iniciar
+      if (mode === 'editor') {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+          e.preventDefault();
+          handleStartReading();
+        }
+        return;
+      }
+
+      // Se estiver no Modo Leitura e em edição inline ativa
+      if (mode === 'reading' && isInlineEditing) {
+        if (e.key === 'Escape' || ((e.ctrlKey || e.metaKey) && e.key === 'Enter')) {
+          e.preventDefault();
+          setIsInlineEditing(false);
+          showToast('Texto salvo!');
+        }
+        return;
+      }
+
+      // Atalhos no Modo Leitura
+      if (mode === 'reading') {
+        if (e.code === 'Space') {
+          e.preventDefault();
+          togglePlay();
+        } else if (e.code === 'ArrowUp') {
+          e.preventDefault();
+          if (isPlaying) {
+            updateSetting('speed', Math.min(100, settings.speed + 1));
+          } else {
+            scroller.scrollToLine(scroller.activeLineIndexRef.current - 1, true);
+          }
+          triggerControlsVisibility();
+        } else if (e.code === 'ArrowDown') {
+          e.preventDefault();
+          if (isPlaying) {
+            updateSetting('speed', Math.max(1, settings.speed - 1));
+          } else {
+            scroller.scrollToLine(scroller.activeLineIndexRef.current + 1, true);
+          }
+          triggerControlsVisibility();
+        } else if (e.code === 'ArrowLeft') {
+          e.preventDefault();
+          scroller.scrollToLine(scroller.activeLineIndexRef.current - 1, true);
+          triggerControlsVisibility();
+        } else if (e.code === 'ArrowRight') {
+          e.preventDefault();
+          scroller.scrollToLine(scroller.activeLineIndexRef.current + 1, true);
+          triggerControlsVisibility();
+        } else if (e.code === 'PageUp') {
+          e.preventDefault();
+          scroller.scrollToLine(scroller.activeLineIndexRef.current - 5, true);
+          triggerControlsVisibility();
+        } else if (e.code === 'PageDown') {
+          e.preventDefault();
+          scroller.scrollToLine(scroller.activeLineIndexRef.current + 5, true);
+          triggerControlsVisibility();
+        } else if (e.code === 'Home') {
+          e.preventDefault();
+          scroller.scrollToLine(0, true);
+          triggerControlsVisibility();
+        } else if (e.code === 'End') {
+          e.preventDefault();
+          scroller.scrollToLine(scriptLines.length - 1, true);
+          triggerControlsVisibility();
+        } else if (e.key === '+' || e.key === '=') {
+          e.preventDefault();
+          updateSetting('speed', Math.min(100, settings.speed + 1));
+          triggerControlsVisibility();
+        } else if (e.key === '-' || e.key === '_') {
+          e.preventDefault();
+          updateSetting('speed', Math.max(1, settings.speed - 1));
+          triggerControlsVisibility();
+        } else if (e.key === '[' || e.key === '{') {
+          e.preventDefault();
+          updateSetting('fontSize', Math.max(20, settings.fontSize - 1));
+          triggerControlsVisibility();
+        } else if (e.key === ']' || e.key === '}') {
+          e.preventDefault();
+          updateSetting('fontSize', Math.min(130, settings.fontSize + 1));
+          triggerControlsVisibility();
+        } else if (e.key === 'e' || e.key === 'E') {
+          e.preventDefault();
+          setIsInlineEditing((prev) => !prev);
+        } else if (e.key === 'r' || e.key === 'R') {
+          e.preventDefault();
+          handleRestart();
+        } else if (e.key === 'o' || e.key === 'O') {
+          e.preventDefault();
+          const currentAngle = settings.rotationAngle !== undefined ? settings.rotationAngle : (settings.forceLandscape ? 90 : 0);
+          const nextAngle = currentAngle === 90 ? 0 : 90;
+          updateSetting('rotationAngle', nextAngle);
+          updateSetting('forceLandscape', nextAngle === 90);
+          triggerControlsVisibility();
+        } else if (e.key === 'f' || e.key === 'F') {
+          e.preventDefault();
+          toggleFullscreen();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          handleBackToEdit();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    mode,
+    isInlineEditing,
+    isPlaying,
+    settings.speed,
+    settings.fontSize,
+    settings.rotationAngle,
+    settings.forceLandscape,
+    scriptLines.length,
+    handleStartReading,
+    togglePlay,
+    updateSetting,
+    triggerControlsVisibility,
+    handleRestart,
+    toggleFullscreen,
+    handleBackToEdit,
+    scroller,
+    showToast,
+  ]);
 
   // Se a rota for aberta como Operador Remoto
   if (isOperatorMode) {
@@ -386,6 +519,10 @@ export const PrompterPage: React.FC = () => {
           onScrollToLine={scroller.scrollToLine}
           onManualScroll={scroller.handleManualScroll}
           onWheel={scroller.handleWheel}
+          onTouchStart={scroller.handleTouchStart}
+          onTouchMove={scroller.handleTouchMove}
+          onTouchEnd={scroller.handleTouchEnd}
+          onScreenClick={scroller.handleScreenClick}
           isInlineEditing={isInlineEditing}
           onToggleInlineEdit={() => {
             setIsInlineEditing((prev) => {

@@ -26,6 +26,10 @@ interface PrompterReadingViewProps {
   onScrollToLine: (index: number) => void;
   onManualScroll: () => void;
   onWheel: (e: React.WheelEvent) => void;
+  onTouchStart?: (e: React.TouchEvent) => void;
+  onTouchMove?: (e: React.TouchEvent) => void;
+  onTouchEnd?: (e: React.TouchEvent) => void;
+  onScreenClick?: () => void;
   // Edição Inline
   isInlineEditing: boolean;
   onToggleInlineEdit: (lineIdx?: number) => void;
@@ -64,6 +68,10 @@ export const PrompterReadingView: React.FC<PrompterReadingViewProps> = ({
   scrollerRef,
   onManualScroll,
   onWheel,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
+  onScreenClick,
   isInlineEditing,
   onToggleInlineEdit,
   inlineTextareaRef,
@@ -122,12 +130,16 @@ export const PrompterReadingView: React.FC<PrompterReadingViewProps> = ({
       } ${settings.rotationAngle ? `rotate-${settings.rotationAngle}` : ''} ${
         isInlineEditing ? 'is-inline-editing-active' : ''
       }`}
-      onClick={() => {
+      onClick={onScreenClick || (() => {
         if (!showCountdown && !isInlineEditing) {
           onTogglePlay();
         }
-      }}
+      })}
       onMouseMove={onTriggerControls}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchEnd}
       onWheel={onWheel}
     >
       {/* Contagem Regressiva */}
