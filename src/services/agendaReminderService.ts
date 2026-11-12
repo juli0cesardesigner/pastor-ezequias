@@ -235,7 +235,9 @@ export async function checkPendingReminders(
 
       const success = await sendLocalNotification(notifTitle, notifBody, {
         tag: `agenda-event-${event.id}`,
+        icon: '/agenda-icon-192.png',
         badge: '/badge-icon.png',
+        vibrate: [100, 50, 100],
         renotify: true,
         data: {
           url: '/?page=agenda',

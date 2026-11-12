@@ -12,8 +12,6 @@
   --prompter-accent: #f59e0b;
   --prompter-accent-hover: #d97706;
   --prompter-accent-light: rgba(245, 158, 11, 0.15);
-  --prompter-focus-line: rgba(245, 158, 11, 0.12);
-  --prompter-focus-border: rgba(245, 158, 11, 0.4);
 }
 
 .prompter-app-wrapper {
@@ -106,6 +104,28 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--prompter-accent);
+}
+
+.back-hub-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(37, 99, 235, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  color: #60a5fa;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: none;
+  transition: all 0.15s ease;
+}
+
+.back-hub-pill-btn:hover {
+  background: rgba(37, 99, 235, 0.28);
+  border-color: #60a5fa;
+  color: #ffffff;
 }
 
 .dot-divider {
@@ -1106,32 +1126,17 @@
 .prompter-reading-screen.rotate-225 { transform: rotate(225deg); }
 .prompter-reading-screen.rotate-315 { transform: rotate(315deg); }
 
-/* Quando estiver em modo de edição direta no celular mantido na vertical, alinhar texto ao teclado */
+/* Quando estiver em modo de edição direta, manter orientação idêntica ao modo de leitura normal */
 .prompter-reading-screen.force-landscape.is-inline-editing-active,
-.prompter-reading-screen[class*="rotate-"].is-inline-editing-active {
-  transform: none !important;
+.prompter-reading-screen.rotate-90.is-inline-editing-active {
+  transform: rotate(90deg) !important;
+  transform-origin: top left !important;
+  position: fixed !important;
   top: 0 !important;
-  left: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-}
-
-.prompter-reading-screen.force-landscape.is-inline-editing-active .prompter-spacer-top {
-  height: 12vh !important;
-}
-
-.prompter-reading-screen.force-landscape.is-inline-editing-active .prompter-floating-hud {
-  justify-content: space-between !important;
-  padding: 0.85rem !important;
-}
-
-.prompter-reading-screen.force-landscape.is-inline-editing-active .prompter-hud-portrait-wrap {
-  display: flex !important;
-}
-
-.prompter-reading-screen.force-landscape.is-inline-editing-active .prompter-hud-landscape-dock {
-  display: none !important;
+  left: 100vw !important;
+  width: 100vh !important;
+  height: 100vw !important;
+  overflow: hidden !important;
 }
 
 .prompter-reading-screen.is-mirrored .prompter-text-column {
@@ -1185,7 +1190,7 @@
   background: transparent !important;
   color: inherit !important;
   font-family: inherit !important;
-  font-weight: 700 !important;
+  font-weight: 800 !important;
   line-height: 1.5 !important;
   letter-spacing: -0.01em !important;
   white-space: pre-wrap !important;
@@ -1199,6 +1204,7 @@
   display: block;
   resize: none !important;
   caret-color: #fbbf24;
+  overflow: hidden !important;
 }
 
 .prompter-text-body {
@@ -1358,93 +1364,31 @@
 
 .prompter-spacer-bottom {
   height: 60vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.prompter-end-marker {
-  font-size: 1.1rem;
-  font-weight: 800;
-  letter-spacing: 0.15em;
-  color: #3f3f46;
-  text-align: center;
+.prompter-warning-banner {
+  position: fixed;
+  top: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(220, 38, 38, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(254, 202, 202, 0.4);
+  color: #ffffff;
+  padding: 0.65rem 1.25rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  white-space: nowrap;
+  animation: slideDownFade 0.25s ease-out;
 }
 
-/* ==========================================================================
-   MARCADOR VISUAL DE LINHA / GUIA DE FOCO
-   ========================================================================== */
-
-.prompter-focus-line-guide {
-  position: absolute;
-  top: 36%;
-  left: 0;
-  right: 0;
-  height: 70px;
-  transform: translateY(-50%);
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 0.5rem;
-  z-index: 5;
-}
-
-.guide-band {
-  flex: 1;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    rgba(245, 158, 11, 0.08) 0%,
-    rgba(245, 158, 11, 0.16) 50%,
-    rgba(245, 158, 11, 0.08) 100%
-  );
-  border-top: 1px solid var(--prompter-focus-border);
-  border-bottom: 1px solid var(--prompter-focus-border);
-  border-radius: 4px;
-}
-
-.guide-arrow {
-  color: #f59e0b;
-  font-size: 1.2rem;
-  font-weight: 900;
-  opacity: 0.85;
-  padding: 0 0.35rem;
-  text-shadow: 0 0 10px rgba(245, 158, 11, 0.8);
-}
-
-.guide-arrow-btn {
-  background: rgba(22, 22, 26, 0.88);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(245, 158, 11, 0.45);
-  color: #fbbf24;
-  font-size: 0.8rem;
-  font-weight: 900;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  pointer-events: auto;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7);
-  z-index: 10;
-  flex-shrink: 0;
-  user-select: none;
-}
-
-.guide-arrow-btn:hover {
-  background: #fbbf24;
-  color: #000000;
-  transform: scale(1.15);
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.7);
-}
-
-.guide-arrow-btn:active {
-  transform: scale(0.92);
+@keyframes slideDownFade {
+  from { opacity: 0; transform: translate(-50%, -10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 /* ==========================================================================
@@ -2411,15 +2355,6 @@
   height: 48vh;
 }
 
-.prompter-reading-screen.force-landscape .prompter-focus-line-guide {
-  height: 42px;
-  top: 33%;
-}
-
-.prompter-reading-screen.force-landscape .guide-arrow {
-  font-size: 0.95rem;
-}
-
 /* Em Landscape Forçado, ocultar portrait e exibir dock de barra única */
 .prompter-reading-screen.force-landscape .prompter-floating-hud {
   justify-content: flex-end !important;
@@ -2513,10 +2448,6 @@
     gap: 0.75rem;
   }
 
-  .prompter-focus-line-guide {
-    height: 55px;
-  }
-
   .script-card-footer {
     flex-direction: column;
     align-items: flex-start;
@@ -2537,15 +2468,6 @@
 
   .prompter-spacer-bottom {
     height: 48vh;
-  }
-
-  .prompter-focus-line-guide {
-    height: 42px;
-    top: 33%;
-  }
-
-  .guide-arrow {
-    font-size: 0.95rem;
   }
 
   /* Em Landscape Nativo, ocultar portrait e exibir dock de barra única */

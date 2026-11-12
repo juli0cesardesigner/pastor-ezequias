@@ -8,6 +8,8 @@ import type {
   AgendaStatus,
   AgendaPriority,
   AgendaEventType,
+  AgendaTask,
+  AgendaTaskInput,
 } from '../types/agenda';
 
 const LOCAL_STORAGE_EVENTS_KEY = 'pastor_ezequias_agenda_events_v1';
@@ -69,6 +71,23 @@ export async function ensureAgendaTables(): Promise<void> {
         p256dh TEXT NOT NULL,
         auth TEXT NOT NULL,
         user_agent TEXT DEFAULT '',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
+    // Garante a existência da tabela de Pendências / Checklist
+    await sql`
+      CREATE TABLE IF NOT EXISTS campaign_agenda_tasks (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        completed BOOLEAN NOT NULL DEFAULT false,
+        assigned_date VARCHAR(20),
+        agenda_event_id INT,
+        priority VARCHAR(20) NOT NULL DEFAULT 'media',
+        notes TEXT NOT NULL DEFAULT '',
+        created_by_name VARCHAR(150) NOT NULL DEFAULT 'Equipe',
+        created_by_user_id INT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
@@ -579,4 +598,275 @@ export async function savePushSubscription(
     return false;
   }
 }
+
+/**
+ * Remove a inscrição do Web Push no Neon DB
+ */
+export async function removePushSubscription(endpoint: string): Promise<boolean> {
+  try {
+    await ensureAgendaTables();
+    await sql`
+      DELETE FROM campaign_agenda_push_subscriptions
+      WHERE endpoint = ${endpoint};
+    `;
+    return true;
+  } catch (err) {
+    console.error('Erro ao remover PushSubscription do Neon DB:', err);
+    return false;
+  }
+}
+
+/**
+ * Retorna todas as inscrições ativas de Web Push
+ */
+export async function getAllPushSubscriptions(): Promise<
+  Array<{ id: number; endpoint: string; p256dh: string; auth: string }>
+> {
+  try {
+    await ensureAgendaTables();
+    const rows = await sql`
+      SELECT id, endpoint, p256dh, auth
+      FROM campaign_agenda_push_subscriptions;
+    `;
+    return rows.map((r: any) => ({
+      id: Number(r.id),
+      endpoint: String(r.endpoint),
+      p256dh: String(r.p256dh),
+      auth: String(r.auth)
+    }));
+  } catch (err) {
+    console.error('Erro ao listar PushSubscriptions do Neon DB:', err);
+    return [];
+  }
+}
+
+/* ==========================================================================
+   PENDÊNCIAS & CHECKLIST DA AGENDA
+   ========================================================================== */
+
+const LOCAL_STORAGE_TASKS_KEY = 'pastor_ezequias_agenda_tasks_v1';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapRowToTask(row: any): AgendaTask {
+  return {
+    id: Number(row.id),
+    title: String(row.title || ''),
+    completed: Boolean(row.completed),
+    assignedDate: row.assigned_date ? String(row.assigned_date) : null,
+    agendaEventId: row.agenda_event_id ? Number(row.agenda_event_id) : null,
+    eventTitle: row.event_title ? String(row.event_title) : null,
+    priority: (row.priority as AgendaPriority) || 'media',
+    notes: String(row.notes || ''),
+    createdByName: String(row.created_by_name || 'Equipe'),
+    createdByUserId: row.created_by_user_id ? Number(row.created_by_user_id) : undefined,
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : undefined,
+  };
+}
+
+export function getLocalAgendaTasksCache(): AgendaTask[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_TASKS_KEY);
+    if (raw) {
+      return JSON.parse(raw);
+    }
+  } catch {}
+  return [];
+}
+
+export function setLocalAgendaTasksCache(tasks: AgendaTask[]): void {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_TASKS_KEY, JSON.stringify(tasks));
+  } catch {}
+}
+
+/**
+ * Busca todas as pendências / checklist cadastradas
+ */
+export async function fetchAllAgendaTasks(): Promise<AgendaTask[]> {
+  await ensureAgendaTables();
+  try {
+    const rows = await sql`
+      SELECT t.id, t.title, t.completed, t.assigned_date, t.agenda_event_id,
+             t.priority, t.notes, t.created_by_name, t.created_by_user_id,
+             t.created_at, t.updated_at,
+             e.title AS event_title
+      FROM campaign_agenda_tasks t
+      LEFT JOIN campaign_agenda_events e ON t.agenda_event_id = e.id
+      ORDER BY t.completed ASC, t.id DESC;
+    `;
+    const tasks = rows.map(mapRowToTask);
+    setLocalAgendaTasksCache(tasks);
+    return tasks;
+  } catch (err) {
+    console.error('Erro ao buscar pendências no Neon DB:', err);
+    return getLocalAgendaTasksCache();
+  }
+}
+
+/**
+ * Cria uma nova pendência
+ */
+export async function createAgendaTask(input: AgendaTaskInput): Promise<AgendaTask> {
+  await ensureAgendaTables();
+
+  const assignedDate = input.assignedDate?.trim() || null;
+  const agendaEventId = input.agendaEventId || null;
+  const priority = input.priority || 'media';
+  const notes = input.notes?.trim() || '';
+  const completed = Boolean(input.completed);
+  const createdByName = input.createdByName?.trim() || 'Equipe';
+  const createdByUserId = input.createdByUserId || null;
+
+  try {
+    const rows = await sql`
+      INSERT INTO campaign_agenda_tasks (
+        title, completed, assigned_date, agenda_event_id, priority, notes,
+        created_by_name, created_by_user_id
+      )
+      VALUES (
+        ${input.title.trim()},
+        ${completed},
+        ${assignedDate},
+        ${agendaEventId},
+        ${priority},
+        ${notes},
+        ${createdByName},
+        ${createdByUserId}
+      )
+      RETURNING id, title, completed, assigned_date, agenda_event_id, priority, notes,
+                created_by_name, created_by_user_id, created_at, updated_at;
+    `;
+
+    let eventTitle: string | null = null;
+    if (agendaEventId) {
+      try {
+        const eventRows = await sql`SELECT title FROM campaign_agenda_events WHERE id = ${agendaEventId} LIMIT 1;`;
+        if (eventRows.length > 0) {
+          eventTitle = String(eventRows[0].title);
+        }
+      } catch {}
+    }
+
+    const createdTask = mapRowToTask({ ...rows[0], event_title: eventTitle });
+    const current = getLocalAgendaTasksCache();
+    const updated = [createdTask, ...current.filter((t) => t.id !== createdTask.id)];
+    setLocalAgendaTasksCache(updated);
+
+    return createdTask;
+  } catch (err) {
+    console.error('Erro ao criar pendência no Neon DB, salvando em fallback local:', err);
+    const fallbackId = Date.now();
+    const fallbackTask: AgendaTask = {
+      id: fallbackId,
+      title: input.title.trim(),
+      completed,
+      assignedDate,
+      agendaEventId,
+      priority,
+      notes,
+      createdByName,
+      createdByUserId: createdByUserId || undefined,
+      createdAt: new Date().toISOString(),
+    };
+    const current = getLocalAgendaTasksCache();
+    const updated = [fallbackTask, ...current];
+    setLocalAgendaTasksCache(updated);
+    return fallbackTask;
+  }
+}
+
+/**
+ * Atualiza os campos de uma pendência
+ */
+export async function updateAgendaTask(id: number, input: Partial<AgendaTaskInput>): Promise<AgendaTask> {
+  await ensureAgendaTables();
+
+  try {
+    const assignedDate = input.assignedDate !== undefined ? (input.assignedDate?.trim() || null) : undefined;
+    const agendaEventId = input.agendaEventId !== undefined ? (input.agendaEventId || null) : undefined;
+    const priority = input.priority !== undefined ? input.priority : undefined;
+    const notes = input.notes !== undefined ? input.notes.trim() : undefined;
+    const completed = input.completed !== undefined ? Boolean(input.completed) : undefined;
+    const title = input.title !== undefined ? input.title.trim() : undefined;
+
+    const rows = await sql`
+      UPDATE campaign_agenda_tasks
+      SET title = COALESCE(${title ?? null}, title),
+          completed = COALESCE(${completed ?? null}, completed),
+          assigned_date = CASE WHEN ${assignedDate !== undefined} THEN ${assignedDate ?? null} ELSE assigned_date END,
+          agenda_event_id = CASE WHEN ${agendaEventId !== undefined} THEN ${agendaEventId ?? null} ELSE agenda_event_id END,
+          priority = COALESCE(${priority ?? null}, priority),
+          notes = COALESCE(${notes ?? null}, notes),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${id}
+      RETURNING id, title, completed, assigned_date, agenda_event_id, priority, notes,
+                created_by_name, created_by_user_id, created_at, updated_at;
+    `;
+
+    if (rows.length === 0) {
+      throw new Error('Pendência não encontrada para atualização');
+    }
+
+    let eventTitle: string | null = null;
+    const targetEventId = rows[0].agenda_event_id;
+    if (targetEventId) {
+      try {
+        const eventRows = await sql`SELECT title FROM campaign_agenda_events WHERE id = ${targetEventId} LIMIT 1;`;
+        if (eventRows.length > 0) {
+          eventTitle = String(eventRows[0].title);
+        }
+      } catch {}
+    }
+
+    const updatedTask = mapRowToTask({ ...rows[0], event_title: eventTitle });
+    const current = getLocalAgendaTasksCache();
+    const updated = current.map((t) => (t.id === id ? updatedTask : t));
+    setLocalAgendaTasksCache(updated);
+    return updatedTask;
+  } catch (err) {
+    console.error('Erro ao atualizar pendência no Neon DB:', err);
+    const current = getLocalAgendaTasksCache();
+    const existing = current.find((t) => t.id === id);
+    if (existing) {
+      const merged: AgendaTask = {
+        ...existing,
+        ...input,
+        title: input.title !== undefined ? input.title.trim() : existing.title,
+        notes: input.notes !== undefined ? input.notes.trim() : existing.notes,
+        assignedDate: input.assignedDate !== undefined ? input.assignedDate : existing.assignedDate,
+        agendaEventId: input.agendaEventId !== undefined ? input.agendaEventId : existing.agendaEventId,
+        priority: input.priority !== undefined ? input.priority : existing.priority,
+        completed: input.completed !== undefined ? input.completed : existing.completed,
+        updatedAt: new Date().toISOString(),
+      };
+      setLocalAgendaTasksCache(current.map((t) => (t.id === id ? merged : t)));
+      return merged;
+    }
+    throw err;
+  }
+}
+
+/**
+ * Alterna status de conclusão da pendência
+ */
+export async function toggleAgendaTaskCompleted(id: number, completed: boolean): Promise<AgendaTask> {
+  return updateAgendaTask(id, { completed });
+}
+
+/**
+ * Exclui uma pendência
+ */
+export async function deleteAgendaTask(id: number): Promise<void> {
+  await ensureAgendaTables();
+  try {
+    await sql`DELETE FROM campaign_agenda_tasks WHERE id = ${id};`;
+  } catch (err) {
+    console.error('Erro ao excluir pendência no Neon DB:', err);
+  }
+  const current = getLocalAgendaTasksCache();
+  const updated = current.filter((t) => t.id !== id);
+  setLocalAgendaTasksCache(updated);
+}
+
 

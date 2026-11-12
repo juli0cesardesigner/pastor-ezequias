@@ -11,13 +11,11 @@ export interface PrompterSettings {
   fontSize: number; // in pixels (e.g. 24 to 96)
   speed: number; // 1 to 100
   maxWidth: number; // in px (e.g. 480 to 1200)
-  lineGuide: boolean; // show reading guide line
   textColor: 'contrast-21' | 'white' | 'yellow-hiviz' | 'amber' | 'cyan';
   textAlign: 'left' | 'center';
   mirrorHorizontal: boolean;
   forceLandscape: boolean; // girar 90 graus / modo paisagem em celulares
-  rotationAngle?: number; // ângulo de rotação (0, 45, 90, 135, 180, 225, 270, 315)
-  voiceTrackEnabled?: boolean; // rolagem guiada por voz (VoiceTrack / ASR)
+  rotationAngle?: number; // ângulo de rotação (0 ou 90)
 }
 
 const STORAGE_KEYS = {
@@ -30,13 +28,11 @@ const DEFAULT_SETTINGS: PrompterSettings = {
   fontSize: typeof window !== 'undefined' && window.innerWidth < 768 ? 38 : 52,
   speed: 28,
   maxWidth: 820,
-  lineGuide: true,
   textColor: 'contrast-21',
   textAlign: 'center',
   mirrorHorizontal: false,
   forceLandscape: false,
   rotationAngle: 0,
-  voiceTrackEnabled: false,
 };
 
 export function usePrompterStorage() {

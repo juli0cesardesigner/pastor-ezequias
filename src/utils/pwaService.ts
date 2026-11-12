@@ -65,9 +65,15 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 }
 
 /**
+ * Chave pública VAPID padrão para Push Notifications da Agenda (P-256 base64url)
+ */
+export const DEFAULT_VAPID_PUBLIC_KEY =
+  'BILDjcmPOttZLxkvujQOYPoEYEEO1Z_GCKrIMM7wBGEKxTHr_LjE1fp6EPStD7ikkbXMNJYZJcrgM9lFymhaPwk';
+
+/**
  * Converte base64 VAPID key para Uint8Array
  */
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+export function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const rawData = window.atob(base64);
@@ -79,11 +85,12 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 /**
- * Solicita permissão e inscreve o usuário para Push Notifications
+ * Solicita permissão e inscreve o usuário para Push Notifications no PushManager
+ * Compatível com o padrão do projeto Hellen (VAPID key + PushManager.subscribe)
  */
 export async function subscribeToPushNotifications(
   registration: ServiceWorkerRegistration,
-  vapidPublicKey?: string
+  vapidPublicKey: string = DEFAULT_VAPID_PUBLIC_KEY
 ): Promise<PushSubscription | null> {
   if (!isPushNotificationSupported()) return null;
 
@@ -93,15 +100,13 @@ export async function subscribeToPushNotifications(
       return null;
     }
 
-    // Se houver uma subscription ativa no PushManager, retorna
     if (registration.pushManager) {
-      const subscription = await registration.pushManager.getSubscription();
-      if (subscription) {
-        return subscription;
+      const existingSubscription = await registration.pushManager.getSubscription();
+      if (existingSubscription) {
+        return existingSubscription;
       }
 
       // No Chrome/Android, pushManager.subscribe exige applicationServerKey (VAPID).
-      // Se vapidPublicKey não foi fornecido, não tenta subscrever com undefined para evitar DOMException.
       if (!vapidPublicKey) {
         return null;
       }
@@ -129,13 +134,18 @@ export interface LocalNotificationOptions {
   badge?: string;
   vibrate?: number[];
   data?: Record<string, unknown>;
+  actions?: Array<{ action: string; title: string; icon?: string }>;
   requireInteraction?: boolean;
   silent?: boolean;
 }
 
 /**
  * Dispara notificação com garantia de exibição na Central de Notificações de celulares
- * (Android Chrome, PWA standalone, Edge, Safari Desktop, etc).
+ * (Android Chrome, PWA standalone, Edge, Safari Desktop, iOS PWA adicionado à tela inicial).
+ * Utiliza o padrão consagrado do projeto Hellen:
+ * - navigator.serviceWorker.ready direto
+ * - Opções limpas de notificação (sem tags conflitantes ou flags que silenciam no Android)
+ * - Fallback via postMessage para o Service Worker
  */
 export async function sendLocalNotification(
   title: string,
@@ -146,73 +156,117 @@ export async function sendLocalNotification(
     return false;
   }
 
-  // Verifica permissão. Se não estiver concedida, não tenta disparar silenciosamente
+  // Verifica permissão. Se não estiver concedida, não tenta disparar
   if (Notification.permission !== 'granted') {
     return false;
   }
 
-  // Opções padronizadas para compatibilidade mobile:
+  // Opções padronizadas para compatibilidade mobile (espelhado do projeto Hellen):
   // - Ícone PNG de 192px (leve e compatível com área de notificação do Android)
   // - Badge PNG transparente monocromático (específico para a barra de status do Android)
-  // - Tag e renotify: true (garantem que novos alertas vibrem e apareçam mesmo se houver anterior)
+  // - Vibração clássica [100, 50, 100]
   // - Data com URL de redirecionamento para a Agenda
+  // - Sem tag genérica obrigatória para evitar que o Android silencie ou mescle alertas novos
+  // Helper seguro para normalização de URLs absolutas para Android NotificationManager
+  const origin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
+  const toAbsoluteUrl = (path?: string, defaultPath: string = ''): string => {
+    const p = (path || defaultPath).trim();
+    if (!p) return '';
+    if (/^https?:\/\//i.test(p)) return p;
+    if (!origin) return p.startsWith('/') ? p : `/${p}`;
+    const cleanPath = p.startsWith('/') ? p : `/${p}`;
+    return `${origin}${cleanPath}`;
+  };
+
   const finalOptions: Record<string, unknown> = {
     body,
-    icon: customOptions?.icon || '/agenda-icon-192.png',
-    badge: customOptions?.badge || '/badge-icon.png',
-    vibrate: customOptions?.vibrate || [200, 100, 200],
-    tag: customOptions?.tag || 'agenda-notification',
-    renotify: customOptions?.renotify ?? true,
-    data: customOptions?.data || { url: '/?page=agenda' },
-    requireInteraction: customOptions?.requireInteraction ?? false,
-    silent: customOptions?.silent ?? false
+    icon: toAbsoluteUrl(customOptions?.icon, '/agenda-icon-192.png'),
+    badge: toAbsoluteUrl(customOptions?.badge, '/badge-icon.png'),
+    vibrate: customOptions?.vibrate || [100, 50, 100],
+    data: customOptions?.data || { url: '/?page=agenda' }
   };
+
+  if (Array.isArray(customOptions?.actions) && customOptions.actions.length > 0) {
+    finalOptions.actions = customOptions.actions;
+  }
+
+  if (customOptions?.tag) {
+    finalOptions.tag = customOptions.tag;
+    if (customOptions.renotify) {
+      finalOptions.renotify = true;
+    }
+  }
+
+  if (customOptions?.requireInteraction) {
+    finalOptions.requireInteraction = true;
+  }
+
+  if (customOptions?.silent) {
+    finalOptions.silent = true;
+  }
 
   // 1. Prioridade móvel: ServiceWorkerRegistration.showNotification()
   // No Android Chrome, 'new Notification()' lança TypeError. O método showNotification do Service Worker
-  // é a ÚNICA forma de postar notificações na Central de Notificações do sistema.
+  // ativo é a ÚNICA forma de postar notificações na Central de Notificações do sistema operacional.
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
     try {
+      // Tenta obter registration existente (rápido, sem bloquear)
       let registration: ServiceWorkerRegistration | null = null;
-
       try {
         registration = (await navigator.serviceWorker.getRegistration()) || null;
       } catch {}
 
+      // Se ainda não estiver registrado, registra /sw.js
       if (!registration) {
-        registration = await registerServiceWorker();
+        try {
+          registration = (await registerServiceWorker()) || null;
+        } catch {}
       }
 
-      // Se o Service Worker ainda estiver instalando ou ativando, aguarda ativação
+      // Se não há worker ativo na registration, aguarda navigator.serviceWorker.ready
+      if (!registration?.active) {
+        let timer: any = null;
+        try {
+          const readyReg = await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise<ServiceWorkerRegistration | null>((resolve) => {
+              timer = setTimeout(() => resolve(null), 2500);
+              if (timer && typeof timer === 'object' && typeof timer.unref === 'function') {
+                timer.unref();
+              }
+            })
+          ]);
+          if (readyReg) {
+            registration = readyReg;
+          }
+        } catch {} finally {
+          if (timer) clearTimeout(timer);
+        }
+      }
+
+      // Se o Service Worker ainda estiver em transição (installing/waiting), aguarda ativação
       if (registration && !registration.active && (registration.installing || registration.waiting)) {
         const worker = registration.installing || registration.waiting;
         if (worker) {
           await new Promise<void>((resolve) => {
-            const handler = () => {
+            let stateTimer: any = null;
+            const onState = () => {
               if (worker.state === 'activated' || worker.state === 'redundant') {
-                worker.removeEventListener('statechange', handler);
+                worker.removeEventListener('statechange', onState);
+                if (stateTimer) clearTimeout(stateTimer);
                 resolve();
               }
             };
-            worker.addEventListener('statechange', handler);
-            setTimeout(resolve, 3000);
+            worker.addEventListener('statechange', onState);
+            stateTimer = setTimeout(() => {
+              worker.removeEventListener('statechange', onState);
+              resolve();
+            }, 1500);
           });
         }
       }
 
-      // Aguarda navigator.serviceWorker.ready caso active ainda não esteja pronto
-      if (!registration?.active) {
-        try {
-          registration = await Promise.race([
-            navigator.serviceWorker.ready,
-            new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000))
-          ]);
-        } catch {
-          registration = null;
-        }
-      }
-
-      // Tenta chamada direta a registration.showNotification
+      // Chamada direta a registration.showNotification no Service Worker ativo
       if (registration && typeof registration.showNotification === 'function') {
         try {
           await registration.showNotification(title, finalOptions);
@@ -222,8 +276,12 @@ export async function sendLocalNotification(
         }
       }
 
-      // Se a chamada direta falhou ou o worker está ativo, envia postMessage ao SW
-      const targetWorker = registration?.active || navigator.serviceWorker.controller;
+      // Se a chamada direta falhou, envia postMessage ao SW (evento SHOW_NOTIFICATION)
+      const targetWorker =
+        registration?.active ||
+        navigator.serviceWorker.controller ||
+        registration?.waiting ||
+        registration?.installing;
       if (targetWorker && typeof targetWorker.postMessage === 'function') {
         targetWorker.postMessage({
           type: 'SHOW_NOTIFICATION',
@@ -242,7 +300,7 @@ export async function sendLocalNotification(
     new Notification(title, finalOptions as NotificationOptions);
     return true;
   } catch (notifErr) {
-    console.warn('Fallback new Notification() não suportado neste dispositivo:', notifErr);
+    console.warn('Fallback new Notification() não suportado neste dispositivo (ex: Android Chrome exige Service Worker ativo):', notifErr);
     return false;
   }
 }

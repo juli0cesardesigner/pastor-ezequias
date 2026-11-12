@@ -617,7 +617,6 @@ export const PrompterOperatorDeck: React.FC<PrompterOperatorDeckProps> = ({
                     <div className="prompter-cloud-card-info">
                       <div className="prompter-cloud-card-header">
                         <h4>{script.title}</h4>
-                        <span className="prompter-category-badge">{script.category}</span>
                       </div>
                       <p className="prompter-cloud-card-preview">
                         {script.content.slice(0, 140)}...

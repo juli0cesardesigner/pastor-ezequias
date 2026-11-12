@@ -8,11 +8,18 @@ import {
   deleteAgendaEvent,
   postponeAgendaEvent,
   savePushSubscription,
+  fetchAllAgendaTasks,
+  createAgendaTask,
+  updateAgendaTask,
+  toggleAgendaTaskCompleted,
+  deleteAgendaTask,
 } from '../../services/agendaService';
 import type {
   AgendaEvent,
   AgendaEventInput,
   AgendaSessionUser,
+  AgendaTask,
+  AgendaTaskInput,
 } from '../../types/agenda';
 import {
   registerServiceWorker,
@@ -20,6 +27,7 @@ import {
   subscribeToPushNotifications,
   sendLocalNotification,
   requestNotificationPermission,
+  DEFAULT_VAPID_PUBLIC_KEY,
 } from '../../utils/pwaService';
 import {
   startReminderMonitor,
@@ -36,6 +44,8 @@ import { AgendaImportantDatesList } from './components/AgendaImportantDatesList'
 import { AgendaSpeedDial } from './components/AgendaSpeedDial';
 import { AgendaPostponeModal } from './components/AgendaPostponeModal';
 import { AgendaConfirmModal } from './components/AgendaConfirmModal';
+import { AgendaChecklist } from './components/AgendaChecklist';
+import { AgendaTaskModal } from './components/AgendaTaskModal';
 
 import './AgendaPage.css';
 
@@ -45,8 +55,15 @@ export const AgendaPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [pushSubscribed, setPushSubscribed] = useState(false);
 
-  // Aba ativa na Home: 'calendario' | 'datas'
-  const [activeTab, setActiveTab] = useState<'calendario' | 'datas'>('calendario');
+  // Aba ativa na Home: 'calendario' | 'datas' | 'pendencias'
+  const [activeTab, setActiveTab] = useState<'calendario' | 'datas' | 'pendencias'>('calendario');
+
+  // Pendências & Checklist
+  const [tasks, setTasks] = useState<AgendaTask[]>([]);
+  const [isLoadingTasks, setIsLoadingTasks] = useState(false);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<AgendaTask | null>(null);
+  const [taskDefaultDate, setTaskDefaultDate] = useState<string | undefined>(undefined);
 
   // Data selecionada (padrão: hoje no formato YYYY-MM-DD)
   const [selectedDate, setSelectedDate] = useState<string>(() => {
@@ -74,11 +91,29 @@ export const AgendaPage: React.FC = () => {
     }
   }, []);
 
+  // Carrega pendências
+  const loadTasks = useCallback(async () => {
+    setIsLoadingTasks(true);
+    try {
+      const data = await fetchAllAgendaTasks();
+      setTasks(data);
+    } catch (err) {
+      console.error('Erro ao buscar pendências:', err);
+    } finally {
+      setIsLoadingTasks(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (currentUser) {
       loadEvents();
+      loadTasks();
     }
-  }, [currentUser, loadEvents]);
+  }, [currentUser, loadEvents, loadTasks]);
+
+  const pendingTasksCount = useMemo(() => {
+    return tasks.filter((t) => !t.completed).length;
+  }, [tasks]);
 
   // Mantém referência atualizada dos eventos para o monitor de lembretes
   const eventsRef = useRef(events);
@@ -86,22 +121,61 @@ export const AgendaPage: React.FC = () => {
     eventsRef.current = events;
   }, [events]);
 
-  // Checa status de permissão Push ao carregar
+  // Checa status de permissão Push e assinatura ativa ao carregar
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      setPushSubscribed(Notification.permission === 'granted');
-    }
+    let isMounted = true;
+    const checkPushState = async () => {
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        const isGranted = Notification.permission === 'granted';
+        if (isMounted) {
+          setPushSubscribed(isGranted);
+        }
+        if (isGranted && 'serviceWorker' in navigator) {
+          try {
+            const registration = await Promise.race([
+              navigator.serviceWorker.ready,
+              new Promise<ServiceWorkerRegistration | null>((resolve) => setTimeout(() => resolve(null), 2000))
+            ]);
+            if (registration && isMounted) {
+              const sub = await registration.pushManager?.getSubscription();
+              setPushSubscribed(!!sub || isGranted);
+            }
+          } catch {}
+        }
+      }
+    };
+    checkPushState();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Inicia o monitor de lembretes em background para disparar avisos de compromissos no celular
   useEffect(() => {
-    if (currentUser && pushSubscribed) {
+    if (
+      currentUser &&
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      Notification.permission === 'granted'
+    ) {
       const stopMonitor = startReminderMonitor(() => eventsRef.current);
       return () => {
         stopMonitor();
       };
     }
   }, [currentUser, pushSubscribed]);
+
+  // Quando a lista de eventos carregar ou atualizar, checa imediatamente lembretes pendentes
+  useEffect(() => {
+    if (
+      events.length > 0 &&
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      Notification.permission === 'granted'
+    ) {
+      checkPendingReminders(events).catch(() => {});
+    }
+  }, [events]);
 
   // Logout
   const handleLogout = () => {
@@ -152,40 +226,49 @@ export const AgendaPage: React.FC = () => {
       const wasAlreadySubscribed = pushSubscribed;
       setPushSubscribed(true);
 
-      // Garante registro do Service Worker
-      let registration: ServiceWorkerRegistration | null = null;
+      // Garante registro e ativação do Service Worker antes do disparo
       if ('serviceWorker' in navigator) {
-        registration = (await navigator.serviceWorker.getRegistration()) || null;
-        if (!registration) {
-          registration = await registerServiceWorker();
-        }
+        await registerServiceWorker().catch(console.warn);
       }
 
-      // Tenta subscrição Web Push caso disponível
-      if (registration && isPushNotificationSupported()) {
-        try {
-          const sub = await subscribeToPushNotifications(registration);
-          if (sub) {
-            await savePushSubscription(currentUser?.id, sub);
-          }
-        } catch (pushErr) {
-          console.warn('Inscrição Web Push remota não ativa:', pushErr);
-        }
-      }
-
-      // Dispara IMEDIATAMENTE notificação na Central de Notificações do celular
+      // Dispara IMEDIATAMENTE notificação na Central de Notificações do celular (não bloqueia esperando pushManager)
       await sendLocalNotification(
         'Agenda Pastor Ezequias',
         wasAlreadySubscribed
           ? 'Notificações ativas! O alerta de teste foi enviado para o seu celular.'
           : 'Notificações ativadas com sucesso! Você receberá avisos dos seus compromissos no celular.',
         {
-          tag: 'agenda-confirmation-notification',
+          icon: '/agenda-icon-192.png',
           badge: '/badge-icon.png',
-          renotify: true,
+          vibrate: [100, 50, 100],
           data: { url: '/?page=agenda' }
         }
       );
+
+      // Checa imediatamente se há lembretes pendentes na agenda para entrega imediata no celular
+      if (Array.isArray(eventsRef.current) && eventsRef.current.length > 0) {
+        checkPendingReminders(eventsRef.current).catch(() => {});
+      }
+
+      // Em paralelo / background: inscreve no PushManager com chave pública VAPID (como no projeto Hellen)
+      if (isPushNotificationSupported()) {
+        (async () => {
+          try {
+            const registration = await Promise.race([
+              navigator.serviceWorker.ready,
+              new Promise<ServiceWorkerRegistration | null>((resolve) => setTimeout(() => resolve(null), 4000))
+            ]);
+            if (registration) {
+              const sub = await subscribeToPushNotifications(registration, DEFAULT_VAPID_PUBLIC_KEY);
+              if (sub) {
+                await savePushSubscription(currentUser?.id, sub);
+              }
+            }
+          } catch (pushErr) {
+            console.warn('Inscrição Web Push remota em background não concluída:', pushErr);
+          }
+        })();
+      }
     } catch (err) {
       console.error('Erro ao ativar notificações:', err);
       alert('Não foi possível ativar as notificações no momento.');
@@ -206,6 +289,7 @@ export const AgendaPage: React.FC = () => {
   // Salvar evento (criar ou editar)
   const handleSaveEvent = async (input: AgendaEventInput) => {
     try {
+      const isEditing = !!editingEvent;
       if (editingEvent) {
         await updateAgendaEvent(editingEvent.id, input);
       } else {
@@ -216,8 +300,28 @@ export const AgendaPage: React.FC = () => {
       setEditingEvent(null);
       await loadEvents();
 
+      // Dispara confirmação visual na central de notificações se ativo
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        const isImportant = input.eventType === 'data_importante';
+        const notifTitle = isEditing
+          ? (isImportant ? '⭐ Data Importante Atualizada!' : '📅 Compromisso Atualizado!')
+          : (isImportant ? '⭐ Nova Data Importante Registrada!' : '📅 Novo Compromisso Agendado!');
+        const dateFormatted = input.eventDate.includes('-')
+          ? input.eventDate.split('-').reverse().join('/')
+          : input.eventDate;
+        const timeFormatted = input.eventTime && input.eventTime !== 'Dia Todo' ? ` às ${input.eventTime}` : '';
+        const notifBody = `${input.title} (${dateFormatted}${timeFormatted})`;
+
+        sendLocalNotification(notifTitle, notifBody, {
+          icon: '/agenda-icon-192.png',
+          badge: '/badge-icon.png',
+          vibrate: [100, 50, 100],
+          data: { url: '/?page=agenda' }
+        }).catch(() => {});
+      }
+
       // Checa imediatamente lembretes com os novos eventos cadastrados
-      if (pushSubscribed && Array.isArray(eventsRef.current)) {
+      if (Array.isArray(eventsRef.current) && eventsRef.current.length > 0) {
         checkPendingReminders(eventsRef.current).catch(() => {});
       }
     } catch (err) {
@@ -231,8 +335,24 @@ export const AgendaPage: React.FC = () => {
     if (!postponeEvent) return;
     try {
       await postponeAgendaEvent(postponeEvent.id, newDate, newTime);
+      const postponedTitle = postponeEvent.title;
       setPostponeEvent(null);
       await loadEvents();
+
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        const dateFormatted = newDate.includes('-') ? newDate.split('-').reverse().join('/') : newDate;
+        const timeFormatted = newTime && newTime !== 'Dia Todo' ? ` às ${newTime}` : '';
+        sendLocalNotification(
+          '📅 Compromisso Reagendado!',
+          `${postponedTitle} (adiado para ${dateFormatted}${timeFormatted})`,
+          {
+            icon: '/agenda-icon-192.png',
+            badge: '/badge-icon.png',
+            vibrate: [100, 50, 100],
+            data: { url: '/?page=agenda' }
+          }
+        ).catch(() => {});
+      }
     } catch (err) {
       console.error('Erro ao adiar evento:', err);
     }
@@ -247,6 +367,89 @@ export const AgendaPage: React.FC = () => {
       await loadEvents();
     } catch (err) {
       console.error('Erro ao excluir evento:', err);
+    }
+  };
+
+  // Handlers de Pendências & Checklist
+  const handleNewTask = (forDate?: string) => {
+    setEditingTask(null);
+    setTaskDefaultDate(forDate || selectedDate);
+    setIsTaskModalOpen(true);
+  };
+
+  const handleEditTask = (task: AgendaTask) => {
+    setEditingTask(task);
+    setTaskDefaultDate(task.assignedDate || selectedDate);
+    setIsTaskModalOpen(true);
+  };
+
+  const handleSaveTask = async (input: AgendaTaskInput, editingId?: number) => {
+    try {
+      if (editingId) {
+        await updateAgendaTask(editingId, input);
+      } else {
+        await createAgendaTask(input);
+      }
+      setIsTaskModalOpen(false);
+      setEditingTask(null);
+      await loadTasks();
+
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        const notifTitle = editingId ? '📋 Pendência Atualizada!' : '📋 Nova Pendência Cadastrada!';
+        sendLocalNotification(notifTitle, input.title, {
+          icon: '/agenda-icon-192.png',
+          badge: '/badge-icon.png',
+          vibrate: [80, 40, 80],
+          data: { url: '/?page=agenda' }
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.error('Erro ao salvar pendência:', err);
+      alert('Não foi possível salvar a pendência. Tente novamente.');
+    }
+  };
+
+  const handleToggleTask = async (task: AgendaTask) => {
+    try {
+      const newStatus = !task.completed;
+      // Atualização otimista imediata
+      setTasks((prev) =>
+        prev.map((t) => (t.id === task.id ? { ...t, completed: newStatus } : t))
+      );
+      await toggleAgendaTaskCompleted(task.id, newStatus);
+      await loadTasks();
+    } catch (err) {
+      console.error('Erro ao alterar status da pendência:', err);
+      await loadTasks();
+    }
+  };
+
+  const handleDeleteTask = async (task: AgendaTask) => {
+    try {
+      setTasks((prev) => prev.filter((t) => t.id !== task.id));
+      await deleteAgendaTask(task.id);
+      await loadTasks();
+    } catch (err) {
+      console.error('Erro ao excluir pendência:', err);
+      await loadTasks();
+    }
+  };
+
+  const handleQuickCreateTask = async (title: string) => {
+    if (!currentUser) return;
+    try {
+      const newTask = await createAgendaTask({
+        title,
+        completed: false,
+        priority: 'media',
+        createdByName: currentUser.name || 'Equipe',
+        createdByUserId: currentUser.id,
+      });
+      setTasks((prev) => [newTask, ...prev.filter((t) => t.id !== newTask.id)]);
+      await loadTasks();
+    } catch (err) {
+      console.error('Erro ao criar pendência rápida:', err);
+      throw err;
     }
   };
 
@@ -280,7 +483,7 @@ export const AgendaPage: React.FC = () => {
 
   return (
     <div className="agenda-pwa-container">
-      {/* Topo: Duas Abas com distribuição equilibrada na tela */}
+      {/* Topo: Três Abas equilibradas: Calendário | Datas | Pendências */}
       <header className="agenda-top-calendar-bar">
         <div className="agenda-top-nav-tabs">
           <button
@@ -296,6 +499,16 @@ export const AgendaPage: React.FC = () => {
             onClick={() => setActiveTab('datas')}
           >
             Datas
+          </button>
+          <button
+            type="button"
+            className={`agenda-nav-tab-btn ${activeTab === 'pendencias' ? 'active' : ''}`}
+            onClick={() => setActiveTab('pendencias')}
+          >
+            <span>Pendências</span>
+            {pendingTasksCount > 0 && (
+              <span className="agenda-nav-tab-badge">{pendingTasksCount}</span>
+            )}
           </button>
         </div>
       </header>
@@ -314,7 +527,7 @@ export const AgendaPage: React.FC = () => {
             />
           </section>
 
-          {/* Registros e Compromissos do Dia Selecionado (Estilo Simplista) */}
+          {/* Registros e Compromissos do Dia Selecionado + Pendências do Dia */}
           <main className="agenda-timeline-section">
             {isLoading && events.length === 0 ? (
               <div className="agenda-simple-empty">
@@ -324,6 +537,14 @@ export const AgendaPage: React.FC = () => {
               <AgendaTimeline
                 events={dayEvents}
                 selectedDate={selectedDate}
+                tasks={tasks}
+                onToggleTask={handleToggleTask}
+                onEditTask={handleEditTask}
+                onDeleteTask={handleDeleteTask}
+                onNewTaskForDay={(date) => {
+                  setSelectedDate(date);
+                  handleNewTask(date);
+                }}
                 onEdit={(ev) => {
                   setEditingEvent(ev);
                   if (ev.eventType === 'data_importante') {
@@ -338,7 +559,7 @@ export const AgendaPage: React.FC = () => {
             )}
           </main>
         </>
-      ) : (
+      ) : activeTab === 'datas' ? (
         /* Aba de Datas Importantes */
         <main className="agenda-timeline-section">
           <AgendaImportantDatesList
@@ -351,13 +572,28 @@ export const AgendaPage: React.FC = () => {
             onDelete={(ev) => setConfirmDeleteEvent(ev)}
           />
         </main>
+      ) : (
+        /* Aba de Pendências & Checklist com espaçamento otimizado */
+        <main className="agenda-checklist-wrapper">
+          <AgendaChecklist
+            tasks={tasks}
+            events={events}
+            isLoading={isLoadingTasks}
+            onToggleComplete={handleToggleTask}
+            onEdit={handleEditTask}
+            onDelete={handleDeleteTask}
+            onQuickCreate={handleQuickCreateTask}
+            onOpenNewModal={() => handleNewTask()}
+          />
+        </main>
       )}
 
-      {/* FAB Flutuante com Opções: Sair, Notificações, Data Importante, Compromisso */}
-      {!isCompromissoModalOpen && !isImportantDateModalOpen && !postponeEvent && !confirmDeleteEvent && (
+      {/* FAB Flutuante com Opções: Sair, Notificações, Pendência, Data Importante, Compromisso */}
+      {!isCompromissoModalOpen && !isImportantDateModalOpen && !isTaskModalOpen && !postponeEvent && !confirmDeleteEvent && (
         <AgendaSpeedDial
           onSelectCompromisso={handleNewCompromisso}
           onSelectDataImportante={handleNewDataImportante}
+          onSelectPendencia={() => handleNewTask(activeTab === 'calendario' ? selectedDate : undefined)}
           pushSubscribed={pushSubscribed}
           onTogglePush={handleRequestPush}
           onLogout={handleLogout}
@@ -393,6 +629,22 @@ export const AgendaPage: React.FC = () => {
             setEditingEvent(null);
           }}
           onSave={handleSaveEvent}
+        />
+      )}
+
+      {/* Modal 3: Nova / Editar Pendência (Checklist) */}
+      {isTaskModalOpen && (
+        <AgendaTaskModal
+          isOpen={isTaskModalOpen}
+          editingTask={editingTask}
+          defaultDate={taskDefaultDate}
+          currentUser={currentUser}
+          events={events}
+          onClose={() => {
+            setIsTaskModalOpen(false);
+            setEditingTask(null);
+          }}
+          onSave={handleSaveTask}
         />
       )}
 

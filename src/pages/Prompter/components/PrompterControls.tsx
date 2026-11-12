@@ -15,10 +15,8 @@ import {
   Contrast,
   Edit3,
   Check,
+  FlipHorizontal,
   Wifi,
-  Mic,
-  MicOff,
-  Bluetooth,
 } from 'lucide-react';
 import type { PrompterSettings } from '../hooks/usePrompterStorage';
 
@@ -42,7 +40,8 @@ interface PrompterControlsProps {
   isRemoteConnected?: boolean;
   currentLine?: number;
   totalLines?: number;
-  isVoiceListening?: boolean;
+  maxSafeFontSize?: number;
+  onShowWarning?: (message: string) => void;
 }
 
 export const PrompterControls: React.FC<PrompterControlsProps> = ({
@@ -58,9 +57,8 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
   visible,
   onOpenP2PModal,
   isP2PConnected,
-  onOpenRemoteModal,
-  isRemoteConnected,
-  isVoiceListening,
+  maxSafeFontSize,
+  onShowWarning,
 }) => {
   const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
 
@@ -73,6 +71,12 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
   };
 
   const increaseFontSize = () => {
+    if (maxSafeFontSize && settings.fontSize >= maxSafeFontSize) {
+      onShowWarning?.(
+        `⚠️ Atenção: Aumentar a fonte acima de ${maxSafeFontSize}px pode causar quebra ou corte de palavras longas!`
+      );
+      return;
+    }
     onUpdateSetting('fontSize', Math.min(110, settings.fontSize + 1));
   };
 
@@ -85,11 +89,12 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
     : (settings.forceLandscape ? 90 : 0);
 
   const toggleLandscape = async () => {
-    const nextAngle = (currentAngle + 90) % 360;
+    // Alterna exclusivamente entre 0° (Retrato) e 90° (Paisagem) - vai e volta
+    const nextAngle = currentAngle === 90 ? 0 : 90;
     onUpdateSetting('rotationAngle', nextAngle);
-    onUpdateSetting('forceLandscape', nextAngle === 90 || nextAngle === 270);
+    onUpdateSetting('forceLandscape', nextAngle === 90);
 
-    if (nextAngle !== 0) {
+    if (nextAngle === 90) {
       try {
         if (!document.fullscreenElement) {
           await document.documentElement.requestFullscreen().catch(() => {});
@@ -143,30 +148,20 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
 
               <button
                 type="button"
-                className={`prompter-hud-btn icon-btn ${settings.voiceTrackEnabled ? 'active active-voice-btn' : ''}`}
-                onClick={() => onUpdateSetting('voiceTrackEnabled', !settings.voiceTrackEnabled)}
-                title={
-                  settings.voiceTrackEnabled
-                    ? isVoiceListening
-                      ? 'VoiceTrack Ativo (Ouvindo voz em tempo real)'
-                      : 'VoiceTrack Ativo'
-                    : 'Ativar VoiceTrack (Rolagem automática guiada por voz)'
-                }
+                className={`prompter-hud-btn icon-btn ${currentAngle === 90 ? 'active' : ''}`}
+                onClick={toggleLandscape}
+                title={currentAngle === 90 ? 'Retornar para Retrato (0°)' : 'Girar para Paisagem (90°)'}
               >
-                {settings.voiceTrackEnabled ? (
-                  <Mic size={17} className={isVoiceListening ? 'text-amber-300 animate-pulse' : ''} />
-                ) : (
-                  <MicOff size={17} />
-                )}
+                <RotateCw size={17} className={currentAngle === 90 ? 'rotate-icon-active' : ''} />
               </button>
 
               <button
                 type="button"
-                className={`prompter-hud-btn icon-btn ${currentAngle > 0 ? 'active' : ''}`}
-                onClick={toggleLandscape}
-                title={`Rotacionar tela (+90°) - Atual: ${currentAngle}°`}
+                className={`prompter-hud-btn icon-btn ${settings.mirrorHorizontal ? 'active' : ''}`}
+                onClick={() => onUpdateSetting('mirrorHorizontal', !settings.mirrorHorizontal)}
+                title={settings.mirrorHorizontal ? 'Desativar Espelho Óptico' : 'Espelhar Horizontalmente (Espelho Óptico)'}
               >
-                <RotateCw size={17} className={currentAngle > 0 ? 'rotate-icon-active' : ''} />
+                <FlipHorizontal size={17} className={settings.mirrorHorizontal ? 'text-amber' : ''} />
               </button>
 
               <button
@@ -177,28 +172,6 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
               >
                 <Sliders size={18} />
               </button>
-
-              {onOpenP2PModal && (
-                <button
-                  type="button"
-                  className={`prompter-hud-btn icon-btn ${isP2PConnected ? 'active' : ''}`}
-                  onClick={onOpenP2PModal}
-                  title={isP2PConnected ? 'Operador Conectado (P2P)' : 'Parear com Notebook Operador'}
-                >
-                  <Wifi size={17} className={isP2PConnected ? 'text-emerald-400' : ''} />
-                </button>
-              )}
-
-              {onOpenRemoteModal && (
-                <button
-                  type="button"
-                  className={`prompter-hud-btn icon-btn ${isRemoteConnected ? 'active' : ''}`}
-                  onClick={onOpenRemoteModal}
-                  title={isRemoteConnected ? 'Controle FEELWORLD Conectado' : 'Diagnóstico / Controle Remoto BLE'}
-                >
-                  <Bluetooth size={17} className={isRemoteConnected ? 'text-cyan-400' : ''} />
-                </button>
-              )}
 
               <button
                 type="button"
@@ -303,30 +276,20 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
 
             <button
               type="button"
-              className={`prompter-hud-circle-btn ${settings.voiceTrackEnabled ? 'active active-voice-btn' : ''}`}
-              onClick={() => onUpdateSetting('voiceTrackEnabled', !settings.voiceTrackEnabled)}
-              title={
-                settings.voiceTrackEnabled
-                  ? isVoiceListening
-                    ? 'VoiceTrack Ativo (Ouvindo voz em tempo real)'
-                    : 'VoiceTrack Ativo'
-                  : 'Ativar VoiceTrack (Rolagem automática guiada por voz)'
-              }
+              className={`prompter-hud-circle-btn ${currentAngle === 90 ? 'active' : ''}`}
+              onClick={toggleLandscape}
+              title={currentAngle === 90 ? 'Retornar para Retrato (0°)' : 'Girar para Paisagem (90°)'}
             >
-              {settings.voiceTrackEnabled ? (
-                <Mic size={18} className={isVoiceListening ? 'text-amber-300 animate-pulse' : ''} />
-              ) : (
-                <MicOff size={18} />
-              )}
+              <RotateCw size={18} className={currentAngle === 90 ? 'rotate-icon-active' : ''} />
             </button>
 
             <button
               type="button"
-              className={`prompter-hud-circle-btn ${currentAngle > 0 ? 'active' : ''}`}
-              onClick={toggleLandscape}
-              title={`Rotacionar tela (+90°) - Atual: ${currentAngle}°`}
+              className={`prompter-hud-circle-btn ${settings.mirrorHorizontal ? 'active' : ''}`}
+              onClick={() => onUpdateSetting('mirrorHorizontal', !settings.mirrorHorizontal)}
+              title={settings.mirrorHorizontal ? 'Desativar Espelho Óptico' : 'Espelhar Horizontalmente (Espelho Óptico)'}
             >
-              <RotateCw size={18} className={currentAngle > 0 ? 'rotate-icon-active' : ''} />
+              <FlipHorizontal size={18} className={settings.mirrorHorizontal ? 'text-amber' : ''} />
             </button>
 
             <button
@@ -337,28 +300,6 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
             >
               <Sliders size={18} />
             </button>
-
-            {onOpenP2PModal && (
-              <button
-                type="button"
-                className={`prompter-hud-circle-btn ${isP2PConnected ? 'active' : ''}`}
-                onClick={onOpenP2PModal}
-                title={isP2PConnected ? 'Operador Conectado (P2P)' : 'Parear com Notebook Operador'}
-              >
-                <Wifi size={18} className={isP2PConnected ? 'text-emerald-400' : ''} />
-              </button>
-            )}
-
-            {onOpenRemoteModal && (
-              <button
-                type="button"
-                className={`prompter-hud-circle-btn ${isRemoteConnected ? 'active' : ''}`}
-                onClick={onOpenRemoteModal}
-                title={isRemoteConnected ? 'Controle FEELWORLD Conectado' : 'Diagnóstico / Controle Remoto BLE'}
-              >
-                <Bluetooth size={18} className={isRemoteConnected ? 'text-cyan-400' : ''} />
-              </button>
-            )}
 
             <button
               type="button"
@@ -458,14 +399,14 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
             </div>
 
             <div className="drawer-content">
-              {/* Orientação da Tela (Rotação de 45° em 45°) */}
+              {/* Orientação da Tela: 0° Retrato ou 90° Paisagem */}
               <div className="setting-control-row">
                 <div className="setting-label-row">
                   <span className="setting-title">
-                    <RotateCw size={16} /> Rotação da Tela
+                    <RotateCw size={16} /> Orientação da Tela
                   </span>
                   <span className="setting-value">
-                    {currentAngle}°
+                    {currentAngle === 90 ? '90° (Paisagem)' : '0° (Retrato)'}
                   </span>
                 </div>
                 <div className="orientation-presets-row">
@@ -478,19 +419,22 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
                     }}
                   >
                     <Smartphone size={16} />
-                    <span>0° (Padrão)</span>
+                    <span>0° Retrato</span>
                   </button>
                   <button
                     type="button"
-                    className="orientation-btn"
-                    onClick={toggleLandscape}
+                    className={`orientation-btn ${currentAngle === 90 ? 'active' : ''}`}
+                    onClick={() => {
+                      onUpdateSetting('rotationAngle', 90);
+                      onUpdateSetting('forceLandscape', true);
+                    }}
                   >
                     <RotateCw size={16} />
-                    <span>Girar +45°</span>
+                    <span>90° Paisagem</span>
                   </button>
                 </div>
                 <span className="setting-hint">
-                  Gira a tela de 45° em 45° para qualquer ângulo desejado em tripés ou suportes inclinados.
+                  Alterna a exibição exclusivamente entre Retrato (0°) e Paisagem (90°).
                 </span>
               </div>
 
@@ -509,10 +453,19 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
                   <input
                     type="range"
                     min="20"
-                    max="110"
+                    max={maxSafeFontSize ? Math.max(maxSafeFontSize, 110) : 110}
                     step="1"
                     value={settings.fontSize}
-                    onChange={(e) => onUpdateSetting('fontSize', Number(e.target.value))}
+                    onChange={(e) => {
+                      const newSize = Number(e.target.value);
+                      if (maxSafeFontSize && newSize > maxSafeFontSize) {
+                        onShowWarning?.(
+                          `⚠️ Atenção: Tamanho acima de ${maxSafeFontSize}px causará hifenização ou quebra da maior frase!`
+                        );
+                        return;
+                      }
+                      onUpdateSetting('fontSize', newSize);
+                    }}
                     className="prompter-slider"
                   />
                   <button type="button" className="stepper-btn-sm" onClick={increaseFontSize}>
@@ -631,38 +584,6 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
                 </div>
               </div>
 
-              {/* VoiceTrack / Rolagem por Voz (ASR) */}
-              <div className="setting-toggle-row">
-                <div>
-                  <span className="setting-title">🎤 VoiceTrack (Seguir Voz)</span>
-                  <p className="setting-desc">Avança o texto automaticamente conforme você fala</p>
-                </div>
-                <label className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={!!settings.voiceTrackEnabled}
-                    onChange={(e) => onUpdateSetting('voiceTrackEnabled', e.target.checked)}
-                  />
-                  <span className="toggle-slider" />
-                </label>
-              </div>
-
-              {/* Guia de leitura central */}
-              <div className="setting-toggle-row">
-                <div>
-                  <span className="setting-title">Marcador Visual da Linha</span>
-                  <p className="setting-desc">Destaque sutil na área central de leitura</p>
-                </div>
-                <label className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={settings.lineGuide}
-                    onChange={(e) => onUpdateSetting('lineGuide', e.target.checked)}
-                  />
-                  <span className="toggle-slider" />
-                </label>
-              </div>
-
               {/* Espelhamento Horizontal (vidro óptico) */}
               <div className="setting-toggle-row">
                 <div>
@@ -678,6 +599,43 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
                   <span className="toggle-slider" />
                 </label>
               </div>
+
+              {/* Conexão / Pareamento com Operador Remoto */}
+              {onOpenP2PModal && (
+                <div className="setting-action-row" style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid #27272a' }}>
+                  <div style={{ marginBottom: '0.6rem' }}>
+                    <span className="setting-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Wifi size={16} className={isP2PConnected ? 'text-emerald-400' : 'text-amber'} />
+                      Operador Remoto (P2P)
+                    </span>
+                    <p className="setting-desc">Conecte um notebook ou tablet para operar à distância</p>
+                  </div>
+                  <button
+                    type="button"
+                    className={`prompter-btn-secondary full-width ${isP2PConnected ? 'is-connected' : ''}`}
+                    onClick={() => {
+                      onOpenP2PModal();
+                      setShowSettingsDrawer(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      padding: '0.65rem 1rem',
+                      borderRadius: '0.5rem',
+                      border: isP2PConnected ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid #3f3f46',
+                      background: isP2PConnected ? 'rgba(16, 185, 129, 0.12)' : '#18181b',
+                      color: isP2PConnected ? '#34d399' : '#f4f4f5',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Wifi size={16} className={isP2PConnected ? 'text-emerald-400' : 'text-amber'} />
+                    <span>{isP2PConnected ? 'Operador Ativo (Configurar)' : 'Parear Operador'}</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="drawer-footer">

@@ -1,5 +1,5 @@
 // Service Worker para a Agenda PWA - Pastor Ezequias
-const CACHE_NAME = 'ezequias-agenda-cache-v4';
+const CACHE_NAME = 'ezequias-agenda-cache-v5';
 const STATIC_ASSETS = [
   '/',
   '/?page=agenda',
@@ -16,6 +16,7 @@ const STATIC_ASSETS = [
 
 // Instalação do Service Worker e pré-cache
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(STATIC_ASSETS).catch((err) => {
@@ -23,7 +24,6 @@ self.addEventListener('install', (event) => {
       });
     })
   );
-  self.skipWaiting();
 });
 
 // Ativação e limpeza de caches antigos
@@ -46,6 +46,17 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
+
+  // Nunca interceptar em localhost durante desenvolvimento ou requisições do Vite
+  if (
+    url.hostname === 'localhost' ||
+    url.hostname === '127.0.0.1' ||
+    url.port === '5173' ||
+    url.pathname.startsWith('/@') ||
+    url.pathname.startsWith('/node_modules/')
+  ) {
+    return;
+  }
 
   // Não interceptar chamadas ao Neon Database ou APIs externas
   if (url.hostname.includes('neon.tech') || url.pathname.startsWith('/api/')) {
@@ -106,8 +117,8 @@ self.addEventListener('fetch', (event) => {
 // Listener de Notificações Web Push (Background)
 self.addEventListener('push', (event) => {
   let data = {
-    title: 'Compromisso - Pastor Ezequias',
-    body: 'Você tem um compromisso na sua agenda!',
+    title: 'Agenda Pastor Ezequias',
+    body: 'Você tem um novo compromisso na sua agenda!',
     url: '/?page=agenda'
   };
 
@@ -119,21 +130,34 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  const origin = self.location ? self.location.origin : '';
+  const toUrl = (path, defaultPath) => {
+    const p = (path || defaultPath || '').trim();
+    if (!p) return '';
+    if (p.startsWith('http://') || p.startsWith('https://')) return p;
+    if (!origin) return p.startsWith('/') ? p : `/${p}`;
+    return `${origin}${p.startsWith('/') ? '' : '/'}${p}`;
+  };
+
+  const resolvedIcon = toUrl(data.icon, '/agenda-icon-192.png');
+  const resolvedBadge = toUrl(data.badge, '/badge-icon.png');
+
   const options = {
-    body: data.body,
-    icon: '/agenda-icon-192.png',
-    badge: '/badge-icon.png',
+    body: data.body || 'Você tem um novo compromisso na sua agenda!',
+    icon: resolvedIcon,
+    badge: resolvedBadge,
     vibrate: [100, 50, 100],
     data: {
       url: data.url || '/?page=agenda'
-    },
-    actions: [
-      { action: 'open', title: 'Ver Agenda' }
-    ]
+    }
   };
 
+  if (Array.isArray(data.actions) && data.actions.length > 0) {
+    options.actions = data.actions;
+  }
+
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    self.registration.showNotification(data.title || 'Agenda Pastor Ezequias', options)
   );
 });
 
@@ -141,17 +165,31 @@ self.addEventListener('push', (event) => {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const { title, options } = event.data;
+    const origin = self.location ? self.location.origin : '';
+    const toUrl = (path, defaultPath) => {
+      const p = (path || defaultPath || '').trim();
+      if (!p) return '';
+      if (p.startsWith('http://') || p.startsWith('https://')) return p;
+      if (!origin) return p.startsWith('/') ? p : `/${p}`;
+      return `${origin}${p.startsWith('/') ? '' : '/'}${p}`;
+    };
+
     const defaultOptions = {
-      icon: '/agenda-icon-192.png',
-      badge: '/badge-icon.png',
-      vibrate: [200, 100, 200],
+      icon: toUrl(options?.icon, '/agenda-icon-192.png'),
+      badge: toUrl(options?.badge, '/badge-icon.png'),
+      vibrate: [100, 50, 100],
       data: {
         url: '/?page=agenda'
       }
     };
     const finalOptions = Object.assign({}, defaultOptions, options || {});
+    finalOptions.icon = defaultOptions.icon;
+    finalOptions.badge = defaultOptions.badge;
+    if (Array.isArray(finalOptions.actions) && finalOptions.actions.length === 0) {
+      delete finalOptions.actions;
+    }
     event.waitUntil(
-      self.registration.showNotification(title || 'Compromisso - Pastor Ezequias', finalOptions)
+      self.registration.showNotification(title || 'Agenda Pastor Ezequias', finalOptions)
     );
   }
 });
@@ -165,11 +203,10 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if ('focus' in client) {
-          if (typeof client.navigate === 'function') {
-            return client.navigate(targetUrl)
-              .then((navClient) => (navClient || client).focus())
-              .catch(() => client.focus());
+        const clientUrl = new URL(client.url);
+        if (clientUrl.origin === self.location.origin && 'focus' in client) {
+          if (typeof client.navigate === 'function' && client.url !== targetUrl) {
+            client.navigate(targetUrl);
           }
           return client.focus();
         }

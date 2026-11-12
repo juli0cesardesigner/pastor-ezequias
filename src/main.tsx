@@ -4,8 +4,8 @@ import './index.css'
 import App from './App.tsx'
 import { registerServiceWorker } from './utils/pwaService'
 
-// Registra o Service Worker do PWA da Agenda
-if (typeof window !== 'undefined') {
+// Registra o Service Worker do PWA da Agenda apenas em produção
+if (typeof window !== 'undefined' && !import.meta.env.DEV) {
   registerServiceWorker();
 }
 

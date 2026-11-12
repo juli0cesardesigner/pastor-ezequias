@@ -75,3 +75,32 @@ export interface AgendaDayStats {
   emAndamento: number;
   concluidos: number;
 }
+
+export type AgendaTaskAssignmentType = 'standalone' | 'date' | 'event';
+
+export interface AgendaTask {
+  id: number;
+  title: string;
+  completed: boolean;
+  assignedDate?: string | null; // Formato YYYY-MM-DD ou null
+  agendaEventId?: number | null; // ID do compromisso vinculado ou null
+  eventTitle?: string | null; // Título do compromisso caso vinculado
+  priority: AgendaPriority;
+  notes?: string;
+  createdByName: string;
+  createdByUserId?: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface AgendaTaskInput {
+  title: string;
+  completed?: boolean;
+  assignedDate?: string | null;
+  agendaEventId?: number | null;
+  priority?: AgendaPriority;
+  notes?: string;
+  createdByName: string;
+  createdByUserId?: number;
+}
+

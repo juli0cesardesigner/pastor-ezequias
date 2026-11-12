@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Calendar, Star, Bell, BellOff, LogOut, X } from 'lucide-react';
+import { Plus, Calendar, Star, Bell, BellOff, LogOut, X, CheckSquare } from 'lucide-react';
 
 interface AgendaSpeedDialProps {
   onSelectCompromisso: () => void;
   onSelectDataImportante: () => void;
+  onSelectPendencia: () => void;
   pushSubscribed: boolean;
   onTogglePush: () => void;
   onLogout: () => void;
@@ -12,6 +13,7 @@ interface AgendaSpeedDialProps {
 export const AgendaSpeedDial: React.FC<AgendaSpeedDialProps> = ({
   onSelectCompromisso,
   onSelectDataImportante,
+  onSelectPendencia,
   pushSubscribed,
   onTogglePush,
   onLogout,
@@ -42,6 +44,11 @@ export const AgendaSpeedDial: React.FC<AgendaSpeedDialProps> = ({
   const handleOpenDataImportante = () => {
     setIsOpen(false);
     onSelectDataImportante();
+  };
+
+  const handleOpenPendencia = () => {
+    setIsOpen(false);
+    onSelectPendencia();
   };
 
   const handleToggleNotification = () => {
@@ -96,7 +103,19 @@ export const AgendaSpeedDial: React.FC<AgendaSpeedDialProps> = ({
           {/* Divisor sutil entre ações do sistema e ações de criação */}
           <div className="speeddial-divider" />
 
-          {/* Opção Principal 1: Data Importante (Destacada) */}
+          {/* Opção Principal 1: Pendência / Checklist (Destacada) */}
+          <button
+            type="button"
+            className="speeddial-option-btn option-primary option-pendencia"
+            onClick={handleOpenPendencia}
+          >
+            <span className="speeddial-label primary emerald">Pendência</span>
+            <div className="speeddial-icon-circle primary emerald">
+              <CheckSquare size={22} />
+            </div>
+          </button>
+
+          {/* Opção Principal 2: Data Importante (Destacada) */}
           <button
             type="button"
             className="speeddial-option-btn option-primary option-data-importante"
@@ -108,7 +127,7 @@ export const AgendaSpeedDial: React.FC<AgendaSpeedDialProps> = ({
             </div>
           </button>
 
-          {/* Opção Principal 2: Compromisso (Destacada) */}
+          {/* Opção Principal 3: Compromisso (Destacada) */}
           <button
             type="button"
             className="speeddial-option-btn option-primary option-compromisso"
@@ -135,3 +154,4 @@ export const AgendaSpeedDial: React.FC<AgendaSpeedDialProps> = ({
     </div>
   );
 };
+

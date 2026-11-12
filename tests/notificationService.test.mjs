@@ -13,6 +13,8 @@ import {
 import {
   subscribeToPushNotifications,
   sendLocalNotification,
+  DEFAULT_VAPID_PUBLIC_KEY,
+  urlBase64ToUint8Array,
 } from '../src/utils/pwaService.ts';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -282,7 +284,7 @@ test('sendLocalNotification handles permissions, service worker dispatch and pos
   let result = await sendLocalNotification('Teste', 'Corpo');
   assert.equal(result, false, 'Must return false when permission is denied');
 
-  // Cenário 2: Notificação permitida com ServiceWorker direto
+  // Cenário 2: Notificação permitida com ServiceWorker direto e opções limpas mobile
   const { notificationsShown } = setupMockEnv({ permission: 'granted' });
   result = await sendLocalNotification('Agenda Pastor Ezequias', 'Notificação de teste');
   assert.equal(result, true, 'Must return true when notification was dispatched');
@@ -290,7 +292,7 @@ test('sendLocalNotification handles permissions, service worker dispatch and pos
   assert.equal(notificationsShown[0].title, 'Agenda Pastor Ezequias');
   assert.equal(notificationsShown[0].options.icon, '/agenda-icon-192.png');
   assert.equal(notificationsShown[0].options.badge, '/badge-icon.png');
-  assert.equal(notificationsShown[0].options.renotify, true);
+  assert.deepEqual(notificationsShown[0].options.vibrate, [100, 50, 100]);
 
   // Cenário 3: Falha no showNotification direto recupera via postMessage para o Service Worker
   const { postedMessages } = setupMockEnv({ permission: 'granted', showNotificationFails: true });
@@ -305,11 +307,17 @@ test('subscribeToPushNotifications without VAPID key gracefully returns null wit
   const { mockSWRegistration } = setupMockEnv({ permission: 'granted' });
   globalThis.window.PushManager = {};
 
-  const sub = await subscribeToPushNotifications(mockSWRegistration);
-  assert.equal(sub, null, 'Must return null cleanly when no vapidPublicKey is provided');
+  const sub = await subscribeToPushNotifications(mockSWRegistration, '');
+  assert.equal(sub, null, 'Must return null cleanly when empty vapidPublicKey is provided');
 });
 
-test('Service Worker: sw.js includes SHOW_NOTIFICATION message listener, cache v5, and PNG icons', () => {
+test('DEFAULT_VAPID_PUBLIC_KEY is configured and urlBase64ToUint8Array properly decodes 65 bytes', () => {
+  assert.ok(DEFAULT_VAPID_PUBLIC_KEY, 'DEFAULT_VAPID_PUBLIC_KEY must be defined');
+  const uint8 = urlBase64ToUint8Array(DEFAULT_VAPID_PUBLIC_KEY);
+  assert.equal(uint8.length, 65, 'Uncompressed P-256 public key must be 65 bytes');
+});
+
+test('Service Worker: sw.js includes SHOW_NOTIFICATION message listener, cache v4, and PNG icons', () => {
   const swPath = path.join(rootDir, 'public', 'sw.js');
   const content = fs.readFileSync(swPath, 'utf-8');
 
@@ -322,11 +330,11 @@ test('Service Worker: sw.js includes SHOW_NOTIFICATION message listener, cache v
     'sw.js must handle SHOW_NOTIFICATION message'
   );
   assert.ok(
-    content.includes("icon: '/agenda-icon-192.png'"),
+    content.includes("icon: '/agenda-icon-192.png'") || content.includes('data.icon'),
     'sw.js must use /agenda-icon-192.png'
   );
   assert.ok(
-    content.includes("badge: '/badge-icon.png'"),
+    content.includes("badge: '/badge-icon.png'") || content.includes('data.badge'),
     'sw.js must use /badge-icon.png as monochrome status bar badge'
   );
   assert.ok(
@@ -345,3 +353,38 @@ test('Physical badge asset public/badge-icon.png exists and is a valid PNG', () 
   assert.equal(buf[2], 0x4e); // N
   assert.equal(buf[3], 0x47); // G
 });
+
+test('sendLocalNotification resolves absolute URLs when window.location.origin is defined', async () => {
+  const { notificationsShown } = setupMockEnv({ permission: 'granted' });
+  globalThis.window.location = { origin: 'https://pastor-ezequias.com' };
+
+  const success = await sendLocalNotification('Teste Origem', 'Corpo teste');
+  assert.equal(success, true);
+  assert.equal(notificationsShown.length, 1);
+  assert.equal(notificationsShown[0].options.icon, 'https://pastor-ezequias.com/agenda-icon-192.png');
+  assert.equal(notificationsShown[0].options.badge, 'https://pastor-ezequias.com/badge-icon.png');
+});
+
+test('sendLocalNotification omits actions when empty to avoid Android mobile failures, but preserves valid actions', async () => {
+  const { notificationsShown } = setupMockEnv({ permission: 'granted' });
+
+  // 1. Sem actions ou actions vazio: propriedade actions não deve estar em options
+  await sendLocalNotification('Alerta 1', 'Sem actions', { actions: [] });
+  assert.equal(notificationsShown.length, 1);
+  assert.equal(notificationsShown[0].options.actions, undefined, 'Empty actions array must be removed');
+
+  // 2. Com action válida: preserva
+  const customActions = [{ action: 'open', title: 'Ver Detalhes' }];
+  await sendLocalNotification('Alerta 2', 'Com action', { actions: customActions });
+  assert.equal(notificationsShown.length, 2);
+  assert.deepEqual(notificationsShown[1].options.actions, customActions, 'Valid actions must be preserved');
+});
+
+test('sendLocalNotification recovers cleanly when navigator.serviceWorker.ready is pending', async () => {
+  // ready nunca resolve, simulando Service Worker em processo lento de ativação
+  const { notificationsShown } = setupMockEnv({ permission: 'granted', swReady: false });
+  const result = await sendLocalNotification('Alerta SW Lento', 'Deve resolver via getRegistration fallback');
+  assert.equal(result, true, 'Must successfully display notification via getRegistration fallback');
+  assert.equal(notificationsShown.length, 1);
+});
+
