@@ -126,21 +126,20 @@ export const usePrompterScroller = ({
     const id = requestAnimationFrame(() => {
       const pos = computeLinePositions();
       linePositionsRef.current = pos;
-      scrollToLine(activeLineIndexRef.current, false);
+      // Não forçar scrollToLine ao mudar estilos para não saltar o texto da tela
     });
     return () => cancelAnimationFrame(id);
-  }, [fontSize, maxWidth, forceLandscape, computeLinePositions, scrollToLine, mode]);
+  }, [fontSize, maxWidth, forceLandscape, computeLinePositions, mode]);
 
   useEffect(() => {
     if (mode !== 'reading') return;
     const handleResize = () => {
       const pos = computeLinePositions();
       linePositionsRef.current = pos;
-      scrollToLine(activeLineIndexRef.current, false);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [mode, computeLinePositions, scrollToLine]);
+  }, [mode, computeLinePositions]);
 
   // Motor de rolagem contínua a 60fps usando requestAnimationFrame
   useEffect(() => {
@@ -150,7 +149,14 @@ export const usePrompterScroller = ({
         animationFrameRef.current = null;
       }
       lastTimeRef.current = null;
+      if (scrollerRef.current) {
+        currentScrollRef.current = scrollerRef.current.scrollTop;
+      }
       return;
+    }
+
+    if (scrollerRef.current) {
+      currentScrollRef.current = scrollerRef.current.scrollTop;
     }
 
     const scrollLoop = (timestamp: number) => {
@@ -212,6 +218,41 @@ export const usePrompterScroller = ({
       }
     }
   }, [isInlineEditing, getActiveLineFromScroll, onActiveLineChange]);
+
+  // Touch manual no modo paisagem (rotação 90°): converte movimento físico dos dedos em scroll
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller || mode !== 'reading') return;
+
+    let touchStartX = 0;
+    let initialScroll = 0;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (isInlineEditing || e.touches.length !== 1) return;
+      touchStartX = e.touches[0].clientX;
+      initialScroll = scroller.scrollTop;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (isInlineEditing || e.touches.length !== 1) return;
+      // Quando a tela está rotacionada 90deg, o eixo Y do conteúdo corresponde ao eixo X da tela física
+      if (forceLandscape) {
+        const deltaX = e.touches[0].clientX - touchStartX;
+        // Arrasto para a esquerda na tela física avança o texto para baixo
+        const newScroll = initialScroll - deltaX;
+        scroller.scrollTop = newScroll;
+        currentScrollRef.current = newScroll;
+      }
+    };
+
+    scroller.addEventListener('touchstart', onTouchStart, { passive: true });
+    scroller.addEventListener('touchmove', onTouchMove, { passive: true });
+
+    return () => {
+      scroller.removeEventListener('touchstart', onTouchStart);
+      scroller.removeEventListener('touchmove', onTouchMove);
+    };
+  }, [mode, forceLandscape, isInlineEditing]);
 
   // Touch e Roleta via Roda do Mouse
   const handleWheel = useCallback(

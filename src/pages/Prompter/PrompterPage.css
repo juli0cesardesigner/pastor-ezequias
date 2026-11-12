@@ -1126,17 +1126,15 @@
 .prompter-reading-screen.rotate-225 { transform: rotate(225deg); }
 .prompter-reading-screen.rotate-315 { transform: rotate(315deg); }
 
-/* Quando estiver em modo de edição direta, manter orientação idêntica ao modo de leitura normal */
-.prompter-reading-screen.force-landscape.is-inline-editing-active,
-.prompter-reading-screen.rotate-90.is-inline-editing-active {
-  transform: rotate(90deg) !important;
-  transform-origin: top left !important;
-  position: fixed !important;
+/* Quando estiver em modo de edição direta, manter orientação limpa a 0 graus */
+.prompter-reading-screen.is-inline-editing-active {
+  transform: none !important;
   top: 0 !important;
-  left: 100vw !important;
-  width: 100vh !important;
-  height: 100vw !important;
-  overflow: hidden !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  overflow-y: auto !important;
 }
 
 .prompter-reading-screen.is-mirrored .prompter-text-column {

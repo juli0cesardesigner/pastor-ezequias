@@ -54,6 +54,7 @@ export const PrompterPage: React.FC = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [activeLineIndex, setActiveLineIndex] = useState(0);
+  const savedRotationBeforeInlineEditRef = useRef<number | null>(null);
 
   const inlineTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const editorTextareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -386,7 +387,28 @@ export const PrompterPage: React.FC = () => {
           onManualScroll={scroller.handleManualScroll}
           onWheel={scroller.handleWheel}
           isInlineEditing={isInlineEditing}
-          onToggleInlineEdit={() => setIsInlineEditing((prev) => !prev)}
+          onToggleInlineEdit={() => {
+            setIsInlineEditing((prev) => {
+              const next = !prev;
+              if (next) {
+                // Entrando na edição: salva a rotação atual e força 0° para edição natural
+                savedRotationBeforeInlineEditRef.current = settings.rotationAngle || (settings.forceLandscape ? 90 : 0);
+                if (savedRotationBeforeInlineEditRef.current !== 0) {
+                  updateSetting('rotationAngle', 0);
+                  updateSetting('forceLandscape', false);
+                }
+              } else {
+                // Concluindo a edição: restaura a rotação anterior (0° ou 90°)
+                if (savedRotationBeforeInlineEditRef.current !== null) {
+                  const restored = savedRotationBeforeInlineEditRef.current;
+                  updateSetting('rotationAngle', restored);
+                  updateSetting('forceLandscape', restored === 90);
+                  savedRotationBeforeInlineEditRef.current = null;
+                }
+              }
+              return next;
+            });
+          }}
           inlineTextareaRef={inlineTextareaRef}
           onInlineTextChange={setText}
           isWakeLocked={isWakeLocked}
