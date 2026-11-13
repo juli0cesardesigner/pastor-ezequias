@@ -113,7 +113,7 @@ export const usePrompterScroller = ({
     const lineEls = scroller.querySelectorAll<HTMLElement>('.prompter-text-line');
     if (lineEls.length === 0) return [];
 
-    const isLandscape = forceLandscape || rotationAngle === 90;
+    const isLandscape = forceLandscape || rotationAngle === 90 || rotationAngle === 270;
     const guideRatio = isLandscape ? 0.33 : 0.36;
     const guideOffset = scroller.clientHeight * guideRatio;
     const maxScroll = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
@@ -410,7 +410,8 @@ export const usePrompterScroller = ({
       }
 
       if (touchStateRef.current.isDragging) {
-        const isLandscape = forceLandscape || rotationAngle === 90;
+        const isLandscape = forceLandscape || rotationAngle === 90 || rotationAngle === 270;
+        const isInverted180 = rotationAngle === 180 || rotationAngle === 270;
 
         // Determinar o deslocamento de scroll ao longo do eixo de leitura:
         // Em 90° clockwise: o texto vertical corre horizontalmente na tela física (arrasto para esquerda avança o texto para baixo)
@@ -425,6 +426,9 @@ export const usePrompterScroller = ({
         } else {
           // Em 0° retrato: arrastar para cima (-totalDy) avança o texto para baixo (+scroll)
           primaryDelta = Math.abs(totalDy) >= Math.abs(totalDx) ? -totalDy : -totalDx;
+        }
+        if (isInverted180) {
+          primaryDelta = -primaryDelta;
         }
 
         const scroller = scrollerRef.current;

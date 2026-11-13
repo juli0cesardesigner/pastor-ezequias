@@ -16,9 +16,14 @@ import {
   Edit3,
   Check,
   FlipHorizontal,
+  FlipVertical,
   Wifi,
+  Star,
+  Trash2,
+  Clock,
+  Bookmark,
 } from 'lucide-react';
-import type { PrompterSettings } from '../hooks/usePrompterStorage';
+import type { PrompterSettings, PrompterPreset, PrompterTextCase } from '../hooks/usePrompterStorage';
 
 interface PrompterControlsProps {
   isPlaying: boolean;
@@ -29,6 +34,13 @@ interface PrompterControlsProps {
   onToggleInlineEdit?: () => void;
   settings: PrompterSettings;
   onUpdateSetting: <K extends keyof PrompterSettings>(key: K, value: PrompterSettings[K]) => void;
+  presets: PrompterPreset[];
+  onApplyPreset: (preset: PrompterPreset) => void;
+  onSavePreset: (name?: string, markPreferred?: boolean) => void;
+  onSaveCurrentAsPreferred: (name?: string) => void;
+  onSetPreferredPreset: (id: string) => void;
+  onDeletePreset: (id: string) => void;
+  onShowToast?: (msg: string) => void;
   isWakeLocked: boolean;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
@@ -44,6 +56,14 @@ interface PrompterControlsProps {
   onShowWarning?: (message: string) => void;
 }
 
+const TEXT_CASE_ORDER: PrompterTextCase[] = ['original', 'uppercase', 'lowercase'];
+
+const TEXT_CASE_LABELS: Record<PrompterTextCase, { short: string; label: string }> = {
+  original: { short: 'Aa', label: 'Como Copiado' },
+  uppercase: { short: 'AA', label: 'Caixa Alta' },
+  lowercase: { short: 'aa', label: 'Caixa Baixa' },
+};
+
 export const PrompterControls: React.FC<PrompterControlsProps> = ({
   isPlaying,
   onTogglePlay,
@@ -52,15 +72,52 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
   onToggleInlineEdit,
   settings,
   onUpdateSetting,
+  presets,
+  onApplyPreset,
+  onSavePreset,
+  onSaveCurrentAsPreferred,
+  onSetPreferredPreset,
+  onDeletePreset,
+  onShowToast,
   isFullscreen,
   onToggleFullscreen,
   visible,
+  estimatedSpeechTime,
   onOpenP2PModal,
   isP2PConnected,
   maxSafeFontSize,
   onShowWarning,
 }) => {
   const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
+  const [presetNameInput, setPresetNameInput] = useState('');
+
+  const currentCase: PrompterTextCase = settings.textCase || 'original';
+
+  const cycleTextCase = () => {
+    const idx = TEXT_CASE_ORDER.indexOf(currentCase);
+    const nextCase = TEXT_CASE_ORDER[(idx + 1) % TEXT_CASE_ORDER.length];
+    onUpdateSetting('textCase', nextCase);
+    onShowToast?.(`Texto: ${TEXT_CASE_LABELS[nextCase].label}`);
+  };
+
+  const preferredPreset = presets.find((p) => p.isPreferred);
+  const isCurrentPreferred =
+    !!preferredPreset &&
+    preferredPreset.fontSize === settings.fontSize &&
+    preferredPreset.speed === settings.speed;
+
+  const handleSavePresetForm = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSavePreset(presetNameInput, false);
+    setPresetNameInput('');
+    onShowToast?.(`Preset salvo (${settings.fontSize}px • Tempo ${settings.speed})`);
+  };
+
+  const handleSavePreferred = () => {
+    onSaveCurrentAsPreferred(presetNameInput.trim() || undefined);
+    setPresetNameInput('');
+    onShowToast?.(`Preferencial salvo: Fonte ${settings.fontSize}px • Tempo ${settings.speed}`);
+  };
 
   const increaseSpeed = () => {
     onUpdateSetting('speed', Math.min(100, settings.speed + 1));
@@ -88,9 +145,12 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
     ? settings.rotationAngle
     : (settings.forceLandscape ? 90 : 0);
 
+  const isLandscapeAngle = currentAngle === 90 || currentAngle === 270;
+  const isInverted180 = currentAngle === 180 || currentAngle === 270;
+
   const toggleLandscape = async () => {
-    // Alterna exclusivamente entre 0° (Retrato) e 90° (Paisagem) - vai e volta
-    const nextAngle = currentAngle === 90 ? 0 : 90;
+    // Alterna entre Retrato (0°) e Paisagem (90°)
+    const nextAngle = isLandscapeAngle ? 0 : 90;
     onUpdateSetting('rotationAngle', nextAngle);
     onUpdateSetting('forceLandscape', nextAngle === 90);
 
@@ -101,6 +161,14 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
         }
       } catch {}
     }
+  };
+
+  const toggleInvert180 = () => {
+    const nextAngle = (currentAngle + 180) % 360;
+    onUpdateSetting('rotationAngle', nextAngle);
+    onUpdateSetting('forceLandscape', nextAngle === 90 || nextAngle === 270);
+    const isNowInverted = nextAngle === 180 || nextAngle === 270;
+    onShowToast?.(isNowInverted ? `Tela invertida 180° (${nextAngle}°)` : `Posição normal (${nextAngle}°)`);
   };
 
   return (
@@ -148,11 +216,20 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
 
               <button
                 type="button"
-                className={`prompter-hud-btn icon-btn ${currentAngle === 90 ? 'active' : ''}`}
+                className={`prompter-hud-btn icon-btn ${isLandscapeAngle ? 'active' : ''}`}
                 onClick={toggleLandscape}
-                title={currentAngle === 90 ? 'Retornar para Retrato (0°)' : 'Girar para Paisagem (90°)'}
+                title={isLandscapeAngle ? 'Retornar para Retrato (0°)' : 'Girar para Paisagem (90°)'}
               >
-                <RotateCw size={17} className={currentAngle === 90 ? 'rotate-icon-active' : ''} />
+                <RotateCw size={17} className={isLandscapeAngle ? 'rotate-icon-active' : ''} />
+              </button>
+
+              <button
+                type="button"
+                className={`prompter-hud-btn icon-btn ${isInverted180 ? 'active' : ''}`}
+                onClick={toggleInvert180}
+                title="Inverter Posição em 180° (Cabeça para Baixo)"
+              >
+                <FlipVertical size={17} className={isInverted180 ? 'text-amber' : ''} />
               </button>
 
               <button
@@ -162,6 +239,15 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
                 title={settings.mirrorHorizontal ? 'Desativar Espelho Óptico' : 'Espelhar Horizontalmente (Espelho Óptico)'}
               >
                 <FlipHorizontal size={17} className={settings.mirrorHorizontal ? 'text-amber' : ''} />
+              </button>
+
+              <button
+                type="button"
+                className={`prompter-hud-btn icon-btn text-case-hud-btn ${currentCase !== 'original' ? 'active' : ''}`}
+                onClick={cycleTextCase}
+                title={`Caixa do Texto: ${TEXT_CASE_LABELS[currentCase].label} (clique para alternar)`}
+              >
+                <span className="hud-case-pill-text">{TEXT_CASE_LABELS[currentCase].short}</span>
               </button>
 
               <button
@@ -184,8 +270,58 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
             </div>
           </div>
 
-          {/* Barra Inferior Centralizada com 3 Controles */}
-          <div className="prompter-hud-bottom">
+          {/* Barra Inferior Centralizada com Presets Rápidos + 3 Controles */}
+          <div className="prompter-hud-bottom-stack">
+            {/* Presets Rápidos de Fonte + Tempo */}
+            <div className="prompter-hud-presets-strip">
+              {presets.map((preset) => {
+                const isActive =
+                  settings.fontSize === preset.fontSize && settings.speed === preset.speed;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    className={`hud-preset-pill ${isActive ? 'active' : ''} ${preset.isPreferred ? 'is-preferred' : ''}`}
+                    onClick={() => {
+                      onApplyPreset(preset);
+                      onShowToast?.(`Preset: ${preset.name} (${preset.fontSize}px • ${preset.speed})`);
+                    }}
+                    title={`${preset.name}: Fonte ${preset.fontSize}px • Tempo ${preset.speed}${preset.isPreferred ? ' (Preferencial)' : ''}`}
+                  >
+                    {preset.isPreferred && <Star size={11} className="preset-star-inline" />}
+                    <span className="preset-pill-name">{preset.name}</span>
+                    <span className="preset-pill-meta">{preset.fontSize}px·{preset.speed}</span>
+                  </button>
+                );
+              })}
+
+              {!isCurrentPreferred && (
+                <button
+                  type="button"
+                  className="hud-preset-pill action-save-pref"
+                  onClick={handleSavePreferred}
+                  title="Salvar combinação atual de Fonte + Tempo como Preferencial"
+                >
+                  <Star size={11} />
+                  <span>Salvar Preferencial</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                className="hud-preset-pill action-save-preset"
+                onClick={() => {
+                  onSavePreset(undefined, false);
+                  onShowToast?.(`Preset salvo (${settings.fontSize}px • ${settings.speed})`);
+                }}
+                title="Guardar combinação atual de Fonte + Tempo"
+              >
+                <Plus size={11} />
+                <span>Guardar</span>
+              </button>
+            </div>
+
+            <div className="prompter-hud-bottom">
             {/* 1. Controle de Velocidade */}
             <div className="prompter-hud-group speed-group">
               <span className="group-label">Velocidade</span>
@@ -245,6 +381,7 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
                 </button>
               </div>
             </div>
+            </div>
           </div>
         </div>
 
@@ -276,11 +413,20 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
 
             <button
               type="button"
-              className={`prompter-hud-circle-btn ${currentAngle === 90 ? 'active' : ''}`}
+              className={`prompter-hud-circle-btn ${isLandscapeAngle ? 'active' : ''}`}
               onClick={toggleLandscape}
-              title={currentAngle === 90 ? 'Retornar para Retrato (0°)' : 'Girar para Paisagem (90°)'}
+              title={isLandscapeAngle ? 'Retornar para Retrato (0°)' : 'Girar para Paisagem (90°)'}
             >
-              <RotateCw size={18} className={currentAngle === 90 ? 'rotate-icon-active' : ''} />
+              <RotateCw size={18} className={isLandscapeAngle ? 'rotate-icon-active' : ''} />
+            </button>
+
+            <button
+              type="button"
+              className={`prompter-hud-circle-btn ${isInverted180 ? 'active' : ''}`}
+              onClick={toggleInvert180}
+              title="Inverter Posição em 180° (Cabeça para Baixo)"
+            >
+              <FlipVertical size={18} className={isInverted180 ? 'text-amber' : ''} />
             </button>
 
             <button
@@ -290,6 +436,15 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
               title={settings.mirrorHorizontal ? 'Desativar Espelho Óptico' : 'Espelhar Horizontalmente (Espelho Óptico)'}
             >
               <FlipHorizontal size={18} className={settings.mirrorHorizontal ? 'text-amber' : ''} />
+            </button>
+
+            <button
+              type="button"
+              className={`prompter-hud-circle-btn text-case-hud-btn ${currentCase !== 'original' ? 'active' : ''}`}
+              onClick={cycleTextCase}
+              title={`Caixa do Texto: ${TEXT_CASE_LABELS[currentCase].label} (clique para alternar)`}
+            >
+              <span className="hud-case-pill-text">{TEXT_CASE_LABELS[currentCase].short}</span>
             </button>
 
             <button
@@ -399,42 +554,228 @@ export const PrompterControls: React.FC<PrompterControlsProps> = ({
             </div>
 
             <div className="drawer-content">
-              {/* Orientação da Tela: 0° Retrato ou 90° Paisagem */}
+              {/* Caixa do Texto: Como Copiado / CAIXA ALTA / caixa baixa */}
+              <div className="setting-control-row">
+                <div className="setting-label-row">
+                  <span className="setting-title">
+                    <Type size={16} /> Caixa do Texto
+                  </span>
+                  <span className="setting-value">
+                    {TEXT_CASE_LABELS[currentCase].label}
+                  </span>
+                </div>
+                <div className="case-presets-row">
+                  <button
+                    type="button"
+                    className={`case-btn ${currentCase === 'original' ? 'active' : ''}`}
+                    onClick={() => onUpdateSetting('textCase', 'original')}
+                  >
+                    <span className="case-btn-badge">Aa</span>
+                    <span>Como Copiado</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`case-btn ${currentCase === 'uppercase' ? 'active' : ''}`}
+                    onClick={() => onUpdateSetting('textCase', 'uppercase')}
+                  >
+                    <span className="case-btn-badge">AA</span>
+                    <span>CAIXA ALTA</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`case-btn ${currentCase === 'lowercase' ? 'active' : ''}`}
+                    onClick={() => onUpdateSetting('textCase', 'lowercase')}
+                  >
+                    <span className="case-btn-badge">aa</span>
+                    <span>caixa baixa</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Presets de Fonte & Tempo (Velocidade) */}
+              <div className="setting-control-row presets-manager-box">
+                <div className="setting-label-row">
+                  <span className="setting-title">
+                    <Bookmark size={16} /> Presets de Fonte & Tempo
+                  </span>
+                  <span className="setting-value">
+                    {settings.fontSize}px • Vel. {settings.speed}
+                    {estimatedSpeechTime ? ` (${estimatedSpeechTime})` : ''}
+                  </span>
+                </div>
+
+                <div className="presets-actions-bar">
+                  <button
+                    type="button"
+                    className={`preferred-action-btn ${isCurrentPreferred ? 'is-active' : ''}`}
+                    onClick={handleSavePreferred}
+                    title="Salvar combinação atual de Fonte + Tempo como Preferencial (carregada por padrão)"
+                  >
+                    <Star size={14} className={isCurrentPreferred ? 'star-filled' : ''} />
+                    <span>
+                      {isCurrentPreferred ? 'Combinação Preferencial Ativa' : 'Salvar Atual como Preferencial'}
+                    </span>
+                  </button>
+                </div>
+
+                <form onSubmit={handleSavePresetForm} className="preset-save-inline-form">
+                  <input
+                    type="text"
+                    className="preset-name-input"
+                    placeholder={`Nome do preset (ex: Studio ${settings.fontSize}px)`}
+                    value={presetNameInput}
+                    onChange={(e) => setPresetNameInput(e.target.value)}
+                  />
+                  <button type="submit" className="preset-save-btn">
+                    <Plus size={14} />
+                    <span>Guardar</span>
+                  </button>
+                </form>
+
+                {presets.length > 0 && (
+                  <div className="presets-list-grid">
+                    {presets.map((preset) => {
+                      const isActive =
+                        settings.fontSize === preset.fontSize && settings.speed === preset.speed;
+                      return (
+                        <div
+                          key={preset.id}
+                          className={`preset-item-card ${isActive ? 'active' : ''} ${
+                            preset.isPreferred ? 'is-preferred' : ''
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            className="preset-item-apply-btn"
+                            onClick={() => {
+                              onApplyPreset(preset);
+                              onShowToast?.(`Preset aplicado: ${preset.name}`);
+                            }}
+                          >
+                            <span className="preset-item-name">
+                              {preset.isPreferred && (
+                                <Star size={12} className="star-filled inline-star" />
+                              )}
+                              {preset.name}
+                            </span>
+                            <span className="preset-item-specs">
+                              Fonte <strong>{preset.fontSize}px</strong> • Tempo <strong>{preset.speed}</strong>
+                            </span>
+                          </button>
+
+                          <div className="preset-item-controls">
+                            <button
+                              type="button"
+                              className={`preset-star-btn ${preset.isPreferred ? 'active' : ''}`}
+                              onClick={() => {
+                                onSetPreferredPreset(preset.id);
+                                onShowToast?.(`"${preset.name}" definido como Preferencial!`);
+                              }}
+                              title={
+                                preset.isPreferred
+                                  ? 'Preset Preferencial (carregado ao abrir)'
+                                  : 'Definir como Preferencial'
+                              }
+                            >
+                              <Star size={14} className={preset.isPreferred ? 'star-filled' : ''} />
+                            </button>
+                            <button
+                              type="button"
+                              className="preset-delete-btn"
+                              onClick={() => onDeletePreset(preset.id)}
+                              title="Excluir preset"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Tempo / Velocidade de Leitura */}
+              <div className="setting-control-row">
+                <div className="setting-label-row">
+                  <span className="setting-title">
+                    <Clock size={16} /> Tempo / Velocidade de Leitura
+                  </span>
+                  <span className="setting-value">
+                    {settings.speed} {estimatedSpeechTime ? `• ${estimatedSpeechTime}` : ''}
+                  </span>
+                </div>
+                <div className="setting-inline-controls">
+                  <button type="button" className="stepper-btn-sm" onClick={decreaseSpeed}>
+                    <Minus size={16} />
+                  </button>
+                  <input
+                    type="range"
+                    min="1"
+                    max="100"
+                    step="1"
+                    value={settings.speed}
+                    onChange={(e) => onUpdateSetting('speed', Number(e.target.value))}
+                    className="prompter-slider"
+                  />
+                  <button type="button" className="stepper-btn-sm" onClick={increaseSpeed}>
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Orientação da Tela: 0° Retrato, 90° Paisagem e Inversão 180° */}
               <div className="setting-control-row">
                 <div className="setting-label-row">
                   <span className="setting-title">
                     <RotateCw size={16} /> Orientação da Tela
                   </span>
                   <span className="setting-value">
-                    {currentAngle === 90 ? '90° (Paisagem)' : '0° (Retrato)'}
+                    {currentAngle}° {isLandscapeAngle ? '(Paisagem)' : '(Retrato)'}
+                    {isInverted180 ? ' • Invertido 180°' : ''}
                   </span>
                 </div>
                 <div className="orientation-presets-row">
                   <button
                     type="button"
-                    className={`orientation-btn ${currentAngle === 0 ? 'active' : ''}`}
+                    className={`orientation-btn ${!isLandscapeAngle ? 'active' : ''}`}
                     onClick={() => {
-                      onUpdateSetting('rotationAngle', 0);
+                      const next = isInverted180 ? 180 : 0;
+                      onUpdateSetting('rotationAngle', next);
                       onUpdateSetting('forceLandscape', false);
                     }}
                   >
                     <Smartphone size={16} />
-                    <span>0° Retrato</span>
+                    <span>{isInverted180 ? '180° Retrato' : '0° Retrato'}</span>
                   </button>
                   <button
                     type="button"
-                    className={`orientation-btn ${currentAngle === 90 ? 'active' : ''}`}
+                    className={`orientation-btn ${isLandscapeAngle ? 'active' : ''}`}
                     onClick={() => {
-                      onUpdateSetting('rotationAngle', 90);
+                      const next = isInverted180 ? 270 : 90;
+                      onUpdateSetting('rotationAngle', next);
                       onUpdateSetting('forceLandscape', true);
                     }}
                   >
                     <RotateCw size={16} />
-                    <span>90° Paisagem</span>
+                    <span>{isInverted180 ? '270° Paisagem' : '90° Paisagem'}</span>
                   </button>
                 </div>
+                <button
+                  type="button"
+                  className={`orientation-btn ${isInverted180 ? 'active' : ''}`}
+                  onClick={toggleInvert180}
+                  style={{ width: '100%' }}
+                >
+                  <FlipVertical size={16} />
+                  <span>
+                    {isInverted180
+                      ? 'Posição Invertida 180° Ativa (Desfazer)'
+                      : 'Inverter Posição 180° (Cabeça para Baixo)'}
+                  </span>
+                </button>
                 <span className="setting-hint">
-                  Alterna a exibição exclusivamente entre Retrato (0°) e Paisagem (90°).
+                  Use "Inverter Posição 180°" se o celular estiver de cabeça para baixo no encaixe do teleprompter.
                 </span>
               </div>
 

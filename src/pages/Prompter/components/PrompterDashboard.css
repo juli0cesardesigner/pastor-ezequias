@@ -4,77 +4,33 @@
 
 .prompter-dashboard {
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   background-color: #0d0f12;
   color: #f4f4f5;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 /* Header */
 .prompter-dashboard-header {
   height: 64px;
+  width: 100%;
+  max-width: 100%;
   padding: 0 1.5rem;
   background-color: rgba(18, 20, 24, 0.85);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   position: sticky;
   top: 0;
   z-index: 30;
-}
-
-.dashboard-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.brand-icon-wrapper {
-  position: relative;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
-}
-
-.brand-dot-live {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #22c55e;
-  box-shadow: 0 0 6px #22c55e;
-}
-
-.brand-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.brand-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #ffffff;
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-
-.brand-badge {
-  font-size: 0.7rem;
-  font-weight: 500;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  box-sizing: border-box;
 }
 
 /* Barra de Hardware */
@@ -125,15 +81,18 @@
   flex: 1;
   max-width: 1200px;
   width: 100%;
+  min-width: 0;
   margin: 0 auto;
   padding: 1.5rem 1rem 3rem 1rem;
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
+  box-sizing: border-box;
 }
 
 /* Hero Action Banner */
 .dashboard-hero-action {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -142,6 +101,7 @@
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.18) 0%, rgba(20, 24, 33, 0.7) 100%);
   border: 1px solid rgba(59, 130, 246, 0.25);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
 }
 
 .hero-text h2 {
@@ -182,19 +142,27 @@
 
 /* Biblioteca */
 .dashboard-library-section {
+  width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  box-sizing: border-box;
 }
 
 .library-toolbar {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .library-search-box {
-  flex: 1;
+  flex: 1 1 0%;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -202,7 +170,12 @@
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 10px;
   padding: 0.65rem 0.9rem;
+  box-sizing: border-box;
   transition: border-color 0.2s;
+}
+
+.library-search-box .search-icon {
+  flex-shrink: 0;
 }
 
 .library-search-box:focus-within {
@@ -211,17 +184,21 @@
 }
 
 .library-search-box .search-input {
-  flex: 1;
+  flex: 1 1 0%;
+  min-width: 0;
+  width: 100%;
   background: transparent;
   border: none;
   outline: none;
   color: #ffffff;
   font-size: 0.9rem;
+  text-overflow: ellipsis;
 }
 
 .library-refresh-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
   padding: 0.65rem 1rem;
   border-radius: 10px;
@@ -231,6 +208,9 @@
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+  box-sizing: border-box;
   transition: all 0.2s;
 }
 
@@ -269,12 +249,18 @@
   color: #ffffff;
 }
 
+.library-search-box .clear-search-btn {
+  flex-shrink: 0;
+}
+
 /* Grid de Roteiros */
 .scripts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
   gap: 1rem;
   margin-top: 0.5rem;
+  width: 100%;
+  min-width: 0;
 }
 
 .script-card {
@@ -286,6 +272,9 @@
   flex-direction: column;
   gap: 0.75rem;
   transition: all 0.2s ease;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .script-card:hover {
@@ -322,6 +311,8 @@
   color: #ffffff;
   margin: 0;
   line-height: 1.35;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .script-snippet {
@@ -334,6 +325,8 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   min-height: 2.5em;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .script-meta-row {
@@ -449,16 +442,6 @@
     height: 56px;
     gap: 0.5rem;
   }
-  .brand-badge {
-    display: none;
-  }
-  .brand-title {
-    font-size: 0.95rem;
-  }
-  .brand-icon-wrapper {
-    width: 32px;
-    height: 32px;
-  }
   .dashboard-hardware-bar {
     gap: 0.35rem;
     flex-shrink: 0;
@@ -475,17 +458,45 @@
     padding: 0.4rem;
     flex-shrink: 0;
   }
+  .prompter-dashboard-content {
+    padding: 1rem 0.75rem 2.5rem 0.75rem;
+    gap: 1.25rem;
+  }
   .dashboard-hero-action {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
+    padding: 1.15rem;
   }
   .hero-new-btn {
     width: 100%;
     justify-content: center;
   }
+  .library-toolbar {
+    gap: 0.5rem;
+  }
+  .library-search-box {
+    padding: 0.6rem 0.75rem;
+    gap: 0.45rem;
+  }
+  .library-refresh-btn {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.8rem;
+  }
   .scripts-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 360px) {
+  .library-toolbar {
+    flex-wrap: wrap;
+  }
+  .library-search-box {
+    flex: 1 1 100%;
+  }
+  .library-refresh-btn {
+    width: 100%;
   }
 }
 

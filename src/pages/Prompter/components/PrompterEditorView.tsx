@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ArrowLeft,
   Bluetooth,
@@ -12,8 +12,11 @@ import {
   FileText,
   Clock,
   Laptop,
+  Star,
+  Plus,
+  Minus,
 } from 'lucide-react';
-import type { PrompterSettings } from '../hooks/usePrompterStorage';
+import type { PrompterSettings, PrompterPreset, PrompterTextCase } from '../hooks/usePrompterStorage';
 import type { CloudScript } from '../../../services/prompterService';
 import { calculateScriptStats, calculateSpeechTime } from '../utils/prompterSpeechTime';
 
@@ -21,6 +24,14 @@ interface PrompterEditorViewProps {
   text: string;
   onTextChange: (newText: string) => void;
   settings: PrompterSettings;
+  onUpdateSetting: <K extends keyof PrompterSettings>(key: K, value: PrompterSettings[K]) => void;
+  presets: PrompterPreset[];
+  onApplyPreset: (preset: PrompterPreset) => void;
+  onSavePreset: (name?: string, markPreferred?: boolean) => void;
+  onSaveCurrentAsPreferred: (name?: string) => void;
+  onSetPreferredPreset: (id: string) => void;
+  onDeletePreset: (id: string) => void;
+  onShowToast?: (msg: string) => void;
   activeCloudScript: CloudScript | null;
   cloudScriptsCount: number;
   draftsCount: number;
@@ -42,10 +53,24 @@ interface PrompterEditorViewProps {
   editorTextareaRef: React.RefObject<HTMLTextAreaElement | null>;
 }
 
+const CASE_OPTIONS: { value: PrompterTextCase; badge: string; label: string }[] = [
+  { value: 'original', badge: 'Aa', label: 'Como Copiado' },
+  { value: 'uppercase', badge: 'AA', label: 'Caixa Alta' },
+  { value: 'lowercase', badge: 'aa', label: 'Caixa Baixa' },
+];
+
 export const PrompterEditorView: React.FC<PrompterEditorViewProps> = ({
   text,
   onTextChange,
   settings,
+  onUpdateSetting,
+  presets,
+  onApplyPreset,
+  onSavePreset,
+  onSaveCurrentAsPreferred,
+  onSetPreferredPreset,
+  onDeletePreset,
+  onShowToast,
   activeCloudScript,
   cloudScriptsCount,
   draftsCount,
@@ -63,8 +88,33 @@ export const PrompterEditorView: React.FC<PrompterEditorViewProps> = ({
   copiedNotification,
   editorTextareaRef,
 }) => {
+  const [showPresetForm, setShowPresetForm] = useState(false);
+  const [newPresetName, setNewPresetName] = useState('');
+
   const stats = calculateScriptStats(text);
   const speechTime = calculateSpeechTime(stats.words, settings.speed);
+
+  const currentCase: PrompterTextCase = settings.textCase || 'original';
+  const textTransformStyle: React.CSSProperties['textTransform'] =
+    currentCase === 'uppercase'
+      ? 'uppercase'
+      : currentCase === 'lowercase'
+      ? 'lowercase'
+      : 'none';
+
+  const preferredPreset = presets.find((p) => p.isPreferred);
+  const isCurrentPreferred =
+    !!preferredPreset &&
+    preferredPreset.fontSize === settings.fontSize &&
+    preferredPreset.speed === settings.speed;
+
+  const handleSavePresetSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSavePreset(newPresetName, false);
+    onShowToast?.(`Preset guardado (${settings.fontSize}px • Tempo ${settings.speed})`);
+    setNewPresetName('');
+    setShowPresetForm(false);
+  };
 
   return (
     <div className="prompter-editor-container">
@@ -141,6 +191,7 @@ export const PrompterEditorView: React.FC<PrompterEditorViewProps> = ({
           <textarea
             ref={editorTextareaRef}
             className="prompter-textarea"
+            style={{ textTransform: textTransformStyle }}
             placeholder="Cole ou digite aqui seu texto para o teleprompter...&#10;&#10;Qualquer membro da equipe pode salvar e carregar roteiros em tempo real pela Nuvem!"
             value={text}
             onChange={(e) => onTextChange(e.target.value)}
@@ -179,6 +230,21 @@ export const PrompterEditorView: React.FC<PrompterEditorViewProps> = ({
             </div>
 
             <div className="right-actions">
+              <div className="editor-case-selector" role="group" aria-label="Caixa do texto">
+                {CASE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`editor-case-btn ${currentCase === opt.value ? 'active' : ''}`}
+                    onClick={() => onUpdateSetting('textCase', opt.value)}
+                    title={`Exibir texto: ${opt.label}`}
+                  >
+                    <span className="editor-case-badge">{opt.badge}</span>
+                    <span className="editor-case-label">{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+
               {draftsCount > 0 && (
                 <button
                   type="button"
@@ -212,18 +278,152 @@ export const PrompterEditorView: React.FC<PrompterEditorViewProps> = ({
         )}
       </main>
 
-      {/* Rodapé com Resumo de Settings e Botão Iniciar */}
+      {/* Rodapé com Controles Rápidos, Presets de Fonte + Tempo e Botão Iniciar */}
       <footer className="prompter-editor-footer">
-        <div className="prompter-settings-preview">
-          <span className="settings-summary-item">
-            Fonte: <strong>{settings.fontSize}px</strong>
-          </span>
-          <span className="settings-summary-item">
-            Velocidade: <strong>{settings.speed}</strong>
-          </span>
-          <span className="settings-summary-item">
-            Largura: <strong>{settings.maxWidth}px</strong>
-          </span>
+        <div className="editor-presets-footer-col">
+          <div className="prompter-settings-preview interactive-steppers">
+            <div className="editor-inline-stepper">
+              <span className="stepper-mini-label">Fonte:</span>
+              <button
+                type="button"
+                className="mini-step-btn"
+                onClick={() => onUpdateSetting('fontSize', Math.max(20, settings.fontSize - 1))}
+                title="Diminuir fonte"
+              >
+                <Minus size={12} />
+              </button>
+              <strong>{settings.fontSize}px</strong>
+              <button
+                type="button"
+                className="mini-step-btn"
+                onClick={() => onUpdateSetting('fontSize', Math.min(110, settings.fontSize + 1))}
+                title="Aumentar fonte"
+              >
+                <Plus size={12} />
+              </button>
+            </div>
+
+            <div className="editor-inline-stepper">
+              <span className="stepper-mini-label">Tempo:</span>
+              <button
+                type="button"
+                className="mini-step-btn"
+                onClick={() => onUpdateSetting('speed', Math.max(1, settings.speed - 1))}
+                title="Diminuir velocidade/tempo"
+              >
+                <Minus size={12} />
+              </button>
+              <strong>{settings.speed}</strong>
+              <button
+                type="button"
+                className="mini-step-btn"
+                onClick={() => onUpdateSetting('speed', Math.min(100, settings.speed + 1))}
+                title="Aumentar velocidade/tempo"
+              >
+                <Plus size={12} />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className={`editor-pref-save-btn ${isCurrentPreferred ? 'is-active' : ''}`}
+              onClick={() => {
+                onSaveCurrentAsPreferred();
+                onShowToast?.(`Preferencial salvo: Fonte ${settings.fontSize}px • Tempo ${settings.speed}`);
+              }}
+              title="Salvar combinação atual de Fonte + Tempo como Preferencial"
+            >
+              <Star size={12} className={isCurrentPreferred ? 'star-filled' : ''} />
+              <span>{isCurrentPreferred ? 'Preferencial Ativo' : 'Salvar Preferencial'}</span>
+            </button>
+
+            <button
+              type="button"
+              className="editor-add-preset-btn"
+              onClick={() => setShowPresetForm((prev) => !prev)}
+              title="Guardar combinação atual como preset"
+            >
+              <Plus size={12} />
+              <span>Guardar Preset</span>
+            </button>
+          </div>
+
+          {showPresetForm && (
+            <form onSubmit={handleSavePresetSubmit} className="editor-preset-inline-form">
+              <input
+                type="text"
+                className="editor-preset-input"
+                placeholder={`Nome do preset (ex: Estúdio ${settings.fontSize}px)`}
+                value={newPresetName}
+                onChange={(e) => setNewPresetName(e.target.value)}
+                autoFocus
+              />
+              <button type="submit" className="editor-preset-submit-btn">
+                Salvar
+              </button>
+              <button
+                type="button"
+                className="editor-preset-cancel-btn"
+                onClick={() => setShowPresetForm(false)}
+              >
+                Cancelar
+              </button>
+            </form>
+          )}
+
+          {presets.length > 0 && (
+            <div className="editor-presets-bar">
+              {presets.map((preset) => {
+                const isActive =
+                  settings.fontSize === preset.fontSize && settings.speed === preset.speed;
+                return (
+                  <div
+                    key={preset.id}
+                    className={`editor-preset-chip ${isActive ? 'active' : ''} ${
+                      preset.isPreferred ? 'is-preferred' : ''
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      className="editor-preset-apply"
+                      onClick={() => {
+                        onApplyPreset(preset);
+                        onShowToast?.(`Preset aplicado: ${preset.name}`);
+                      }}
+                      title={`Aplicar ${preset.name}: Fonte ${preset.fontSize}px • Tempo ${preset.speed}`}
+                    >
+                      {preset.isPreferred && <Star size={11} className="star-filled" />}
+                      <span>{preset.name}</span>
+                      <span className="editor-preset-meta">
+                        {preset.fontSize}px · {preset.speed}
+                      </span>
+                    </button>
+                    {!preset.isPreferred && (
+                      <button
+                        type="button"
+                        className="editor-preset-star-action"
+                        onClick={() => {
+                          onSetPreferredPreset(preset.id);
+                          onShowToast?.(`"${preset.name}" definido como Preferencial`);
+                        }}
+                        title="Definir este preset como Preferencial"
+                      >
+                        <Star size={11} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="editor-preset-del-action"
+                      onClick={() => onDeletePreset(preset.id)}
+                      title="Excluir preset"
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="prompter-primary-actions">

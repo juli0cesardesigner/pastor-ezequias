@@ -71,16 +71,6 @@ export const PrompterDashboard: React.FC<PrompterDashboardProps> = ({
     <div className="prompter-dashboard">
       {/* Topo / Navbar do Dashboard */}
       <header className="prompter-dashboard-header">
-        <div className="dashboard-brand">
-          <div className="brand-icon-wrapper">
-            <span className="brand-dot-live" />
-            <FileText size={22} className="brand-icon" />
-          </div>
-          <div className="brand-info">
-            <span className="brand-badge">Estúdio de Gravação</span>
-          </div>
-        </div>
-
         {/* Barra de Hardware e Conectividade */}
         <div className="dashboard-hardware-bar">
           <button

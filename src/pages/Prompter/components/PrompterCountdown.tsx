@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface PrompterCountdownProps {
   onComplete: () => void;
@@ -7,19 +7,21 @@ interface PrompterCountdownProps {
 
 export const PrompterCountdown: React.FC<PrompterCountdownProps> = ({ onComplete, onCancel }) => {
   const [count, setCount] = useState<number>(3);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     if (count <= 0) {
-      onComplete();
+      onCompleteRef.current();
       return;
     }
 
     const timer = setTimeout(() => {
       setCount((prev) => prev - 1);
-    }, 900);
+    }, 1000);
 
     return () => clearTimeout(timer);
-  }, [count, onComplete]);
+  }, [count]);
 
   return (
     <div

@@ -27,6 +27,12 @@ export const PrompterPage: React.FC = () => {
     setText,
     settings,
     updateSetting,
+    presets,
+    applyPreset,
+    savePreset,
+    saveCurrentAsPreferred,
+    setPreferredPreset,
+    deletePreset,
     drafts,
     saveCurrentAsDraft,
     loadDraft,
@@ -59,6 +65,10 @@ export const PrompterPage: React.FC = () => {
   const inlineTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const editorTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const hideControlsTimerRef = useRef<number | null>(null);
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
+  const showCountdownRef = useRef(showCountdown);
+  showCountdownRef.current = showCountdown;
 
   // Array de linhas do roteiro memoizado
   const scriptLines = useMemo(() => text.split('\n'), [text]);
@@ -73,19 +83,50 @@ export const PrompterPage: React.FC = () => {
   }, [isPlaying]);
 
   const togglePlay = useCallback(() => {
-    setIsPlaying((prev) => {
-      const next = !prev;
-      if (next) {
-        setShowControls(false);
-        if (hideControlsTimerRef.current) clearTimeout(hideControlsTimerRef.current);
-      } else {
-        setShowControls(true);
-      }
-      return next;
-    });
+    if (hideControlsTimerRef.current) {
+      clearTimeout(hideControlsTimerRef.current);
+      hideControlsTimerRef.current = null;
+    }
+
+    if (showCountdownRef.current) {
+      showCountdownRef.current = false;
+      setShowCountdown(false);
+      isPlayingRef.current = false;
+      setIsPlaying(false);
+      setShowControls(true);
+      return;
+    }
+
+    if (isPlayingRef.current) {
+      isPlayingRef.current = false;
+      setIsPlaying(false);
+      setShowControls(true);
+    } else {
+      // A cada pausa, retomar inicia uma contagem regressiva de 3 segundos
+      showCountdownRef.current = true;
+      setShowCountdown(true);
+      setShowControls(false);
+    }
   }, []);
 
   const pauseReading = useCallback(() => {
+    isPlayingRef.current = false;
+    setIsPlaying(false);
+    setShowControls(true);
+  }, []);
+
+  const handleCountdownComplete = useCallback(() => {
+    showCountdownRef.current = false;
+    setShowCountdown(false);
+    isPlayingRef.current = true;
+    setIsPlaying(true);
+    setShowControls(false);
+  }, []);
+
+  const handleCountdownCancel = useCallback(() => {
+    showCountdownRef.current = false;
+    setShowCountdown(false);
+    isPlayingRef.current = false;
     setIsPlaying(false);
     setShowControls(true);
   }, []);
@@ -106,6 +147,7 @@ export const PrompterPage: React.FC = () => {
     scriptLinesCount: scriptLines.length,
     onActiveLineChange: setActiveLineIndex,
     onReachEnd: () => {
+      isPlayingRef.current = false;
       setIsPlaying(false);
       setShowControls(true);
     },
@@ -172,7 +214,10 @@ export const PrompterPage: React.FC = () => {
   // Ações de Início / Play / Pause
   const handleStartReading = useCallback(() => {
     if (!text.trim()) return;
+    isPlayingRef.current = false;
+    setIsPlaying(false);
     setMode('reading');
+    showCountdownRef.current = true;
     setShowCountdown(true);
     setShowControls(false);
     scroller.restart();
@@ -187,7 +232,9 @@ export const PrompterPage: React.FC = () => {
 
   // Navegação de Volta
   const handleBackToEdit = useCallback(() => {
+    isPlayingRef.current = false;
     setIsPlaying(false);
+    showCountdownRef.current = false;
     setShowCountdown(false);
     setIsInlineEditing(false);
     setMode('editor');
@@ -195,7 +242,9 @@ export const PrompterPage: React.FC = () => {
   }, []);
 
   const handleBackToDashboard = useCallback(() => {
+    isPlayingRef.current = false;
     setIsPlaying(false);
+    showCountdownRef.current = false;
     setShowCountdown(false);
     setIsInlineEditing(false);
     setMode('dashboard');
@@ -206,7 +255,10 @@ export const PrompterPage: React.FC = () => {
   const handlePlayScriptFromDashboard = useCallback((script: CloudScript) => {
     cloud.setActiveCloudScript(script);
     setText(script.content);
+    isPlayingRef.current = false;
+    setIsPlaying(false);
     setMode('reading');
+    showCountdownRef.current = true;
     setShowCountdown(true);
     setShowControls(false);
     scroller.restart();
@@ -380,9 +432,17 @@ export const PrompterPage: React.FC = () => {
         } else if (e.key === 'o' || e.key === 'O') {
           e.preventDefault();
           const currentAngle = settings.rotationAngle !== undefined ? settings.rotationAngle : (settings.forceLandscape ? 90 : 0);
-          const nextAngle = currentAngle === 90 ? 0 : 90;
+          const isLandscape = currentAngle === 90 || currentAngle === 270;
+          const nextAngle = isLandscape ? 0 : 90;
           updateSetting('rotationAngle', nextAngle);
           updateSetting('forceLandscape', nextAngle === 90);
+          triggerControlsVisibility();
+        } else if (e.key === 'i' || e.key === 'I') {
+          e.preventDefault();
+          const currentAngle = settings.rotationAngle !== undefined ? settings.rotationAngle : (settings.forceLandscape ? 90 : 0);
+          const nextAngle = (currentAngle + 180) % 360;
+          updateSetting('rotationAngle', nextAngle);
+          updateSetting('forceLandscape', nextAngle === 90 || nextAngle === 270);
           triggerControlsVisibility();
         } else if (e.key === 'f' || e.key === 'F') {
           e.preventDefault();
@@ -465,6 +525,14 @@ export const PrompterPage: React.FC = () => {
           text={text}
           onTextChange={setText}
           settings={settings}
+          onUpdateSetting={updateSetting}
+          presets={presets}
+          onApplyPreset={applyPreset}
+          onSavePreset={savePreset}
+          onSaveCurrentAsPreferred={saveCurrentAsPreferred}
+          onSetPreferredPreset={setPreferredPreset}
+          onDeletePreset={deletePreset}
+          onShowToast={showToast}
           activeCloudScript={cloud.activeCloudScript}
           cloudScriptsCount={cloud.cloudScripts.length}
           draftsCount={drafts.length}
@@ -496,20 +564,19 @@ export const PrompterPage: React.FC = () => {
           scriptLines={scriptLines}
           settings={settings}
           updateSetting={updateSetting}
+          presets={presets}
+          onApplyPreset={applyPreset}
+          onSavePreset={savePreset}
+          onSaveCurrentAsPreferred={saveCurrentAsPreferred}
+          onSetPreferredPreset={setPreferredPreset}
+          onDeletePreset={deletePreset}
+          onShowToast={showToast}
           isPlaying={isPlaying}
           onTogglePlay={togglePlay}
           onRestart={handleRestart}
           showCountdown={showCountdown}
-          onCountdownComplete={() => {
-            setShowCountdown(false);
-            setIsPlaying(true);
-            setShowControls(false);
-          }}
-          onCountdownCancel={() => {
-            setShowCountdown(false);
-            setIsPlaying(false);
-            setShowControls(true);
-          }}
+          onCountdownComplete={handleCountdownComplete}
+          onCountdownCancel={handleCountdownCancel}
           showControls={showControls}
           onTriggerControls={triggerControlsVisibility}
           isFullscreen={isFullscreen}
@@ -528,6 +595,10 @@ export const PrompterPage: React.FC = () => {
             setIsInlineEditing((prev) => {
               const next = !prev;
               if (next) {
+                isPlayingRef.current = false;
+                setIsPlaying(false);
+                showCountdownRef.current = false;
+                setShowCountdown(false);
                 // Entrando na edição: salva a rotação atual e força 0° para edição natural
                 savedRotationBeforeInlineEditRef.current = settings.rotationAngle || (settings.forceLandscape ? 90 : 0);
                 if (savedRotationBeforeInlineEditRef.current !== 0) {
@@ -535,11 +606,11 @@ export const PrompterPage: React.FC = () => {
                   updateSetting('forceLandscape', false);
                 }
               } else {
-                // Concluindo a edição: restaura a rotação anterior (0° ou 90°)
+                // Concluindo a edição: restaura a rotação anterior (0°, 90°, 180° ou 270°)
                 if (savedRotationBeforeInlineEditRef.current !== null) {
                   const restored = savedRotationBeforeInlineEditRef.current;
                   updateSetting('rotationAngle', restored);
-                  updateSetting('forceLandscape', restored === 90);
+                  updateSetting('forceLandscape', restored === 90 || restored === 270);
                   savedRotationBeforeInlineEditRef.current = null;
                 }
               }

@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { PrompterControls } from './PrompterControls';
 import { PrompterCountdown } from './PrompterCountdown';
-import type { PrompterSettings } from '../hooks/usePrompterStorage';
+import type { PrompterSettings, PrompterPreset } from '../hooks/usePrompterStorage';
 import { calculateMaxSafeFontSize } from '../utils/prompterFontSize';
 
 interface PrompterReadingViewProps {
@@ -9,6 +9,13 @@ interface PrompterReadingViewProps {
   scriptLines: string[];
   settings: PrompterSettings;
   updateSetting: <K extends keyof PrompterSettings>(key: K, value: PrompterSettings[K]) => void;
+  presets: PrompterPreset[];
+  onApplyPreset: (preset: PrompterPreset) => void;
+  onSavePreset: (name?: string, markPreferred?: boolean) => void;
+  onSaveCurrentAsPreferred: (name?: string) => void;
+  onSetPreferredPreset: (id: string) => void;
+  onDeletePreset: (id: string) => void;
+  onShowToast?: (msg: string) => void;
   // Estados de Leitura
   isPlaying: boolean;
   onTogglePlay: () => void;
@@ -54,6 +61,13 @@ export const PrompterReadingView: React.FC<PrompterReadingViewProps> = ({
   scriptLines,
   settings,
   updateSetting,
+  presets,
+  onApplyPreset,
+  onSavePreset,
+  onSaveCurrentAsPreferred,
+  onSetPreferredPreset,
+  onDeletePreset,
+  onShowToast,
   isPlaying,
   onTogglePlay,
   onRestart,
@@ -96,16 +110,22 @@ export const PrompterReadingView: React.FC<PrompterReadingViewProps> = ({
   }, [settings.maxWidth, settings.forceLandscape]);
 
   // Calcula o tamanho máximo seguro de fonte para que nenhuma palavra quebre ou hifenize
-  const maxSafeFontSize = useMemo(() => {
-    return calculateMaxSafeFontSize(text, containerWidth, 48);
-  }, [text, containerWidth]);
+  const transformedTextForMeasure = useMemo(() => {
+    if (settings.textCase === 'uppercase') return text.toUpperCase();
+    if (settings.textCase === 'lowercase') return text.toLowerCase();
+    return text;
+  }, [text, settings.textCase]);
 
-  // Auto-ajuste de fonte ao carregar o roteiro: se o tamanho atual for maior que o seguro, reduz automaticamente
-  useEffect(() => {
-    if (maxSafeFontSize > 0 && settings.fontSize > maxSafeFontSize) {
-      updateSetting('fontSize', maxSafeFontSize);
-    }
-  }, [maxSafeFontSize, settings.fontSize, updateSetting]);
+  const maxSafeFontSize = useMemo(() => {
+    return calculateMaxSafeFontSize(transformedTextForMeasure, containerWidth, 48);
+  }, [transformedTextForMeasure, containerWidth]);
+
+  const textTransformValue: React.CSSProperties['textTransform'] =
+    settings.textCase === 'uppercase'
+      ? 'uppercase'
+      : settings.textCase === 'lowercase'
+      ? 'lowercase'
+      : 'none';
 
   const handleShowWarning = (msg: string) => {
     setWarningMessage(msg);
@@ -125,11 +145,11 @@ export const PrompterReadingView: React.FC<PrompterReadingViewProps> = ({
 
   return (
     <div
-      className={`prompter-reading-screen ${settings.mirrorHorizontal ? 'is-mirrored' : ''} ${
-        settings.forceLandscape ? 'force-landscape' : ''
-      } ${settings.rotationAngle ? `rotate-${settings.rotationAngle}` : ''} ${
-        isInlineEditing ? 'is-inline-editing-active' : ''
-      }`}
+      className={`prompter-reading-screen ${
+        settings.mirrorHorizontal && !isInlineEditing ? 'is-mirrored' : ''
+      } ${settings.forceLandscape && !isInlineEditing ? 'force-landscape' : ''} ${
+        settings.rotationAngle && !isInlineEditing ? `rotate-${settings.rotationAngle}` : ''
+      } ${isInlineEditing ? 'is-inline-editing-active' : ''}`}
       onClick={onScreenClick || (() => {
         if (!showCountdown && !isInlineEditing) {
           onTogglePlay();
@@ -180,6 +200,7 @@ export const PrompterReadingView: React.FC<PrompterReadingViewProps> = ({
             maxWidth: `${settings.maxWidth}px`,
             fontSize: `${settings.fontSize}px`,
             textAlign: settings.textAlign,
+            textTransform: textTransformValue,
             fontWeight: 800,
           }}
         >
@@ -224,6 +245,13 @@ export const PrompterReadingView: React.FC<PrompterReadingViewProps> = ({
         onRestart={onRestart}
         settings={settings}
         onUpdateSetting={updateSetting}
+        presets={presets}
+        onApplyPreset={onApplyPreset}
+        onSavePreset={onSavePreset}
+        onSaveCurrentAsPreferred={onSaveCurrentAsPreferred}
+        onSetPreferredPreset={onSetPreferredPreset}
+        onDeletePreset={onDeletePreset}
+        onShowToast={onShowToast}
         isWakeLocked={isWakeLocked}
         isFullscreen={isFullscreen}
         onToggleFullscreen={onToggleFullscreen}
