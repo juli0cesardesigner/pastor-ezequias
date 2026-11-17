@@ -144,6 +144,18 @@ export function getRouteFromLocation(): PageRoute {
     return 'videos';
   }
   if (
+    path === '/carrossel' ||
+    path.startsWith('/carrossel/') ||
+    path === '/mockup' ||
+    path.startsWith('/mockup/') ||
+    hash === 'carrossel' ||
+    hash === 'mockup' ||
+    pageParam === 'carrossel' ||
+    pageParam === 'mockup'
+  ) {
+    return 'carrossel';
+  }
+  if (
     path === '/votos' ||
     path.startsWith('/votos/') ||
     path === '/eleicoes' ||

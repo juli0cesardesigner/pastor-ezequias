@@ -1,0 +1,509 @@
+.carousel-mockup-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 12px 60px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  user-select: none;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Tema Escuro (Padrão) */
+.carousel-mockup-page.theme-dark {
+  background-color: #0c0f14;
+  color: #fff;
+}
+
+/* Tema Branco / Light */
+.carousel-mockup-page.theme-light {
+  background-color: #f0f2f5;
+  color: #000;
+}
+
+/* Input invisível com atalho de clique no avatar */
+.hidden-file-input {
+  display: none;
+}
+
+/* Área de Dropzone quando vazia */
+.carousel-empty-dropzone {
+  width: 100%;
+  max-width: 440px;
+  min-height: 480px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 28px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.theme-dark .carousel-empty-dropzone {
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.theme-dark .carousel-empty-dropzone:hover,
+.theme-dark .carousel-empty-dropzone.dragging {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.theme-light .carousel-empty-dropzone {
+  border: 2px dashed rgba(0, 0, 0, 0.2);
+  background: #ffffff;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+.theme-light .carousel-empty-dropzone:hover,
+.theme-light .carousel-empty-dropzone.dragging {
+  border-color: #2563eb;
+  background: rgba(37, 99, 235, 0.05);
+}
+
+.carousel-empty-icon {
+  width: 50px;
+  height: 50px;
+  color: #3b82f6;
+  margin-bottom: 4px;
+}
+
+.carousel-empty-dropzone h3 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.theme-dark .carousel-empty-dropzone h3 {
+  color: #f8fafc;
+}
+
+.theme-light .carousel-empty-dropzone h3 {
+  color: #1e293b;
+}
+
+.carousel-empty-dropzone p {
+  font-size: 13px;
+  max-width: 290px;
+  line-height: 1.45;
+}
+
+.theme-dark .carousel-empty-dropzone p {
+  color: #94a3b8;
+}
+
+.theme-light .carousel-empty-dropzone p {
+  color: #64748b;
+}
+
+/* Card Mockup Instagram */
+.insta-post-card {
+  width: 100%;
+  max-width: 440px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.theme-dark .insta-post-card {
+  background-color: #000;
+  border: 1px solid #262626;
+}
+
+.theme-light .insta-post-card {
+  background-color: #fff;
+  border: 1px solid #dbdbdb;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+/* Header do Post */
+.insta-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  transition: border-color 0.2s ease;
+}
+
+.theme-dark .insta-header {
+  background: #000;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.theme-light .insta-header {
+  background: #fff;
+  border-bottom: 1px solid #efefef;
+}
+
+.insta-header-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Avatar clicável como atalho oculto para carregar/trocar arquivos */
+.insta-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.theme-dark .insta-avatar {
+  border: 1.5px solid #333;
+}
+
+.theme-light .insta-avatar {
+  border: 1.5px solid #e2e8f0;
+}
+
+.insta-avatar:hover {
+  transform: scale(1.06);
+  opacity: 0.9;
+}
+
+.insta-avatar:active {
+  transform: scale(0.96);
+}
+
+.insta-user-texts {
+  display: flex;
+  flex-direction: column;
+}
+
+.insta-username-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.insta-username {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.theme-dark .insta-username {
+  color: #fff;
+}
+
+.theme-light .insta-username {
+  color: #262626;
+}
+
+.insta-verified-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  background-color: #0095f6;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: bold;
+}
+
+.insta-location {
+  font-size: 11px;
+  margin-top: 1px;
+}
+
+.theme-dark .insta-location {
+  color: #a8a8a8;
+}
+
+.theme-light .insta-location {
+  color: #737373;
+}
+
+.insta-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.insta-follow-btn {
+  background: transparent;
+  color: #0095f6;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: default;
+}
+
+/* Botão de Alternar Tema (Dark/Light) discreto no header */
+.insta-theme-toggle-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 6px;
+  transition: opacity 0.2s;
+}
+
+.theme-dark .insta-theme-toggle-btn {
+  color: #f5f5f5;
+}
+
+.theme-light .insta-theme-toggle-btn {
+  color: #262626;
+}
+
+.insta-theme-toggle-btn:hover {
+  opacity: 0.7;
+}
+
+.insta-more-btn {
+  cursor: default;
+}
+
+.theme-dark .insta-more-btn {
+  color: #f5f5f5;
+}
+
+.theme-light .insta-more-btn {
+  color: #262626;
+}
+
+/* Viewport do Carrossel (Proporção 4:5 = 1080x1350) */
+.insta-carousel-viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  touch-action: pan-y pinch-zoom;
+}
+
+.theme-dark .insta-carousel-viewport {
+  background-color: #000;
+}
+
+.theme-light .insta-carousel-viewport {
+  background-color: #fafafa;
+}
+
+.insta-slide-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.insta-slide-item {
+  min-width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-dark .insta-slide-item {
+  background-color: #000;
+}
+
+.theme-light .insta-slide-item {
+  background-color: #fafafa;
+}
+
+.insta-slide-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Badge numérico de lâminas (1/10) */
+.insta-slide-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background-color: rgba(18, 18, 18, 0.75);
+  backdrop-filter: blur(8px);
+  color: #f5f5f5;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 14px;
+  letter-spacing: 0.5px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* Setas de navegação desktop */
+.insta-nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 6;
+  opacity: 0.85;
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.theme-dark .insta-nav-arrow {
+  background: rgba(255, 255, 255, 0.85);
+  color: #000;
+}
+
+.theme-light .insta-nav-arrow {
+  background: rgba(255, 255, 255, 0.95);
+  color: #262626;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.insta-nav-arrow:hover {
+  opacity: 1;
+  transform: translateY(-50%) scale(1.08);
+}
+
+.insta-nav-prev {
+  left: 10px;
+}
+
+.insta-nav-next {
+  right: 10px;
+}
+
+/* Ações & Engajamento: Mockup Fixo */
+.insta-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 6px;
+}
+
+.theme-dark .insta-actions-bar {
+  background: #000;
+}
+
+.theme-light .insta-actions-bar {
+  background: #fff;
+}
+
+.insta-left-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.insta-action-icon {
+  cursor: default;
+}
+
+.theme-dark .insta-action-icon {
+  color: #f5f5f5;
+}
+
+.theme-light .insta-action-icon {
+  color: #262626;
+}
+
+/* Bolinhas de Paginação (Bullets) */
+.insta-dots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.theme-dark .insta-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #555;
+  transition: all 0.2s ease;
+}
+
+.theme-light .insta-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #c7c7c7;
+  transition: all 0.2s ease;
+}
+
+.insta-dot.active {
+  background-color: #0095f6 !important;
+  transform: scale(1.15);
+}
+
+/* Rodapé / Texto do Post */
+.insta-footer-content {
+  padding: 4px 14px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.theme-dark .insta-footer-content {
+  background: #000;
+  color: #f5f5f5;
+}
+
+.theme-light .insta-footer-content {
+  background: #fff;
+  color: #262626;
+}
+
+.insta-likes {
+  font-weight: 700;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.insta-caption {
+  word-break: break-word;
+}
+
+.insta-caption-user {
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.theme-dark .insta-caption-user {
+  color: #fff;
+}
+
+.theme-light .insta-caption-user {
+  color: #000;
+}
+
+.insta-caption-text {
+  font-size: 13px;
+}
+
+.theme-dark .insta-caption-text {
+  color: #e5e5e5;
+}
+
+.theme-light .insta-caption-text {
+  color: #262626;
+}
+
+.insta-time-ago {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #737373;
+  margin-top: 8px;
+  letter-spacing: 0.3px;
+}
